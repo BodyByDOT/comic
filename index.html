@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BodyByDOT Comics</title>
+<meta name="description" content="Free interactive comics from BodyByDOT">
+<meta name="theme-color" content="#1a1210">
+
+<!-- Open Graph / link previews -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="BodyByDOT Comics">
+<meta property="og:title" content="BodyByDOT Comics">
+<meta property="og:description" content="Free interactive comics from BodyByDOT">
+<meta property="og:url" content="https://comic.bodybydot.com/">
+<meta property="og:image" content="https://comic.bodybydot.com/assets/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="BodyByDOT Comics newsstand: three comic spinner racks">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="BodyByDOT Comics">
+<meta name="twitter:description" content="Free interactive comics from BodyByDOT">
+<meta name="twitter:image" content="https://comic.bodybydot.com/assets/og-image.jpg">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23ffc61a'/%3E%3Ctext x='32' y='46' font-family='Arial Black,Arial' font-weight='900' font-size='38' text-anchor='middle' fill='%23111'%3ED%3C/text%3E%3C/svg%3E">
+<link rel="preload" href="assets/bangers.woff2" as="font" type="font/woff2" crossorigin>
+
+<script>
+/* =====================================================================
+   SITE DATA  (edit here; everything below is drawn from this)
+   ===================================================================== */
+
+// ▼ ONE-LINE SWAP: once issue-0/ is uploaded, change this to
+//   'issue-0/assets/cover-front.jpg'
+const THUMB_ISSUE_0 = 'issue-0/assets/cover-front.jpg';
+
+// One object per spinner rack (left to right).
+//   series / sub : text on the rack's top sign (sub is optional)
+//   theme        : 'dot' | 'corpo' | 'new'  (sign + placeholder colors)
+//   slots        : number of wire pockets (3 per tier: left, front, right)
+//   issues       : real comics; to add an issue, add ONE line here
+//                  { title, href, thumb, badge? }
+//   firstIssue   : number shown on the first "ISSUE #n COMING SOON" is
+//                  firstIssue + issues.length (default 0)
+//   placeholders : how many COMING SOON comics to show (default: fill
+//                  every empty pocket); remaining pockets stay empty
+//   mystery      : true = "?" placeholders with no issue numbers
+// Pockets fill front-facing first (top to bottom), then the side pockets.
+const RACKS = [
+  { series: 'BODY BY DOT', sub: 'FANTASY SERIES', theme: 'dot', slots: 9, firstIssue: 0,
+    issues: [
+      { title: 'Issue #0', href: 'issue-0/', thumb: THUMB_ISSUE_0, badge: 'NEW!' },
+      // { title: 'Issue #1', href: 'issue-1/', thumb: 'issue-1/assets/cover-front.jpg' },
+    ] },
+  { series: 'CORPO CLEANER', sub: '', theme: 'corpo', slots: 9, firstIssue: 1,
+    issues: [] },
+  { series: 'NEW SERIES', sub: 'COMING SOON', theme: 'new', slots: 9,
+    issues: [], placeholders: 3, mystery: true },
+];
+</script>
+
+<style>
+@font-face{font-family:"Bangers";src:url("assets/bangers.woff2") format("woff2");font-display:swap}
+:root{
+  --comic-font:"Bangers","Impact","Haettenschweiler","Arial Narrow Bold","Avenir Next Condensed",sans-serif;
+  --chrome:linear-gradient(90deg,#6f757c 0%,#c9cfd6 22%,#ffffff 42%,#aab1b9 64%,#5f656c 100%);
+  --wire:#d9dee4;
+  --header-h:48px;
+  --foot-h:60px;          /* dots + footer area on the floor */
+  /* comic width: fits the viewport height on phones, capped by width */
+  --cw:clamp(112px, min(38vw, calc((100vh - var(--header-h) - var(--foot-h) - 16px) / 4.9)), 190px);
+  --ch:calc(var(--cw) * 22 / 17);   /* covers are 17:22 (letter-size art) */
+}
+@supports (height:100svh){
+  :root{--cw:clamp(112px, min(38vw, calc((100svh - var(--header-h) - var(--foot-h) - 16px) / 4.9)), 190px)}
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+html{-webkit-text-size-adjust:100%;background:#1a1210}
+body{
+  min-height:100vh;min-height:100svh;display:flex;flex-direction:column;
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#2a1a10;
+  overflow-x:hidden;-webkit-tap-highlight-color:transparent;
+}
+
+/* ---------- header: shop sign board + awning ---------- */
+.shop-sign{
+  position:relative;z-index:5;height:var(--header-h);
+  display:flex;align-items:center;justify-content:center;gap:10px;padding:0 12px;
+  background:linear-gradient(#2a1d17,#140d0a);border-bottom:3px solid #ffc61a;
+  box-shadow:0 4px 0 #b3121a,0 8px 14px rgba(0,0,0,.35);
+}
+.shop-sign a.home{display:flex;align-items:center;gap:10px;text-decoration:none;min-width:0}
+.shop-sign img{height:34px;width:auto;display:block;border-radius:4px;flex:none}
+.shop-sign h1{
+  margin:0;font-family:var(--comic-font);font-weight:400;letter-spacing:.04em;line-height:1;
+  font-size:clamp(21px,6.6vw,36px);color:#ffc61a;white-space:nowrap;
+  text-shadow:2px 2px 0 #b3121a,4px 4px 0 rgba(0,0,0,.45);
+}
+.shop-sign .tag{display:none;font:700 12px/1.2 system-ui,sans-serif;color:#f6e6c8;letter-spacing:.14em;text-transform:uppercase;opacity:.85;margin-left:6px}
+
+/* ---------- the store: wall + floor ---------- */
+main.store{
+  position:relative;flex:1 0 auto;display:flex;flex-direction:column;justify-content:flex-end;
+  padding-bottom:var(--foot-h);overflow:hidden;isolation:isolate;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 30%,rgba(255,244,214,.75),rgba(255,244,214,0) 70%),
+    repeating-linear-gradient(90deg,rgba(110,55,15,.07) 0 2px,rgba(0,0,0,0) 2px 72px),
+    linear-gradient(#f2d29a,#e3a95e 75%,#c98445);
+}
+.floor{
+  position:absolute;left:0;right:0;bottom:0;height:calc(var(--foot-h) + var(--cw) * .55);z-index:-1;
+  border-top:9px solid #5b3018;box-shadow:0 -2px 0 #8a4f2a;overflow:hidden;
+  background:#6b3e22;perspective:300px;perspective-origin:50% 0;
+}
+.floor::before{
+  content:"";position:absolute;left:-60%;right:-60%;top:0;height:260%;
+  transform-origin:50% 0;transform:rotateX(62deg);
+  background:repeating-conic-gradient(#f1e3c6 0 25%,#7a2f22 0 50%) 0 0/56px 56px;
+}
+.floor::after{content:"";position:absolute;inset:0;background:linear-gradient(rgba(40,20,8,.55),rgba(40,20,8,.15) 40%,rgba(40,20,8,.45))}
+
+/* ---------- rack row / phone carousel ---------- */
+.racks{
+  display:flex;align-items:flex-end;overflow-x:auto;overflow-y:hidden;
+  scroll-snap-type:x mandatory;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;
+  scrollbar-width:none;padding:10px 8% 0;overscroll-behavior-x:contain;
+}
+.racks::-webkit-scrollbar{display:none}
+.rack{
+  flex:0 0 84%;scroll-snap-align:center;scroll-snap-stop:always;
+  display:flex;flex-direction:column;align-items:center;position:relative;
+}
+.rack:focus{outline:none}
+
+/* ---------- top sign ---------- */
+.sign{position:relative;z-index:30;display:flex;flex-direction:column;align-items:center}
+.sign-face{
+  position:relative;min-width:calc(var(--cw)*1.45);max-width:calc(var(--cw)*2.2);
+  padding:calc(var(--cw)*.06) calc(var(--cw)*.1) calc(var(--cw)*.05);
+  background:var(--paper);border:3px solid var(--ink);border-radius:5px;text-align:center;
+  box-shadow:inset 0 0 0 2px rgba(255,255,255,.55),0 6px 10px rgba(0,0,0,.3);
+}
+.sign-face::after{ /* side of the sign box, for depth */
+  content:"";position:absolute;top:-3px;bottom:-3px;right:calc(var(--cw)*-.11);width:calc(var(--cw)*.1);
+  background:linear-gradient(90deg,rgba(0,0,0,.35),rgba(0,0,0,.15)),var(--paper);
+  border:3px solid var(--ink);border-left:0;border-radius:0 4px 4px 0;
+  transform:skewY(-28deg);transform-origin:0 0;
+}
+.sign-title{
+  display:block;font-family:var(--comic-font);color:var(--ink);line-height:.95;letter-spacing:.03em;
+  font-size:calc(var(--cw)*.23);white-space:nowrap;text-shadow:2px 2px 0 var(--sign-shadow,rgba(0,0,0,.18));
+}
+.sign-sub{
+  display:block;margin-top:calc(var(--cw)*.035);padding:2px 6px 1px;background:var(--ink);color:var(--sub,#fff);
+  font:800 calc(var(--cw)*.078)/1.2 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;letter-spacing:.16em;white-space:nowrap;
+}
+.post{width:calc(var(--cw)*.055);height:calc(var(--cw)*.1);background:var(--chrome)}
+.crown{
+  width:calc(var(--cw)*.6);height:calc(var(--cw)*.09);border-radius:50%;
+  border:2px solid var(--wire);box-shadow:0 1px 0 rgba(0,0,0,.35),inset 0 -1px 0 rgba(0,0,0,.25);
+  margin-bottom:calc(var(--cw)*-.04);position:relative;z-index:1;
+}
+
+/* ---------- wire tower ---------- */
+.tower{position:relative;display:flex;flex-direction:column;align-items:center;padding-top:calc(var(--cw)*.06)}
+.pole{
+  position:absolute;left:50%;top:0;bottom:calc(var(--cw)*-.16);width:calc(var(--cw)*.055);
+  transform:translateX(-50%);background:var(--chrome);z-index:0;
+}
+.tier{
+  position:relative;display:flex;align-items:flex-start;justify-content:center;
+  height:calc(var(--ch)*.8);perspective:calc(var(--cw)*3.6);perspective-origin:50% 40%;
+}
+.tier:last-child{height:calc(var(--ch) + var(--cw)*.02)}
+.tier.featured{height:calc(var(--ch) + var(--cw)*.1)} /* a real issue in front: show the whole cover */
+.tier:has(.comic:hover),.tier:has(.comic:focus-visible),.tier.lifted{z-index:60 !important}
+.pocket{position:relative;width:var(--cw);height:var(--ch);flex:none}
+.pocket.L{transform-origin:100% 50%;transform:rotateY(-56deg);margin-left:calc(var(--cw)*-.42)}
+.pocket.R{transform-origin:0 50%;transform:rotateY(56deg);margin-right:calc(var(--cw)*-.42)}
+.pocket.C{z-index:2}
+/* back wire loop poking above the comic */
+.pocket::before{
+  content:"";position:absolute;left:14%;right:14%;top:calc(var(--cw)*-.07);height:30%;
+  border:2px solid var(--wire);border-bottom:0;border-radius:6px 6px 0 0;
+  box-shadow:0 -1px 0 rgba(0,0,0,.25);z-index:0;
+}
+/* front wire basket that holds the comic */
+.lip{
+  position:absolute;left:-3%;right:-3%;bottom:-2px;height:27%;z-index:3;pointer-events:none;
+  border:2px solid var(--wire);border-top:0;border-radius:0 0 4px 4px;
+  box-shadow:0 2px 0 rgba(0,0,0,.28),inset 0 -1px 0 rgba(0,0,0,.25);
+}
+.lip::before{content:"";position:absolute;left:-2px;right:-2px;top:0;height:2.5px;background:var(--chrome);box-shadow:0 1px 0 rgba(0,0,0,.35)}
+.lip::after{content:"";position:absolute;left:0;right:0;top:55%;height:2px;background:var(--wire);opacity:.9;box-shadow:0 1px 0 rgba(0,0,0,.25)}
+.pocket.L .lip,.pocket.R .lip{filter:brightness(.82)}
+
+/* ---------- comics ---------- */
+.comic{
+  position:absolute;inset:0;display:block;z-index:1;padding:0;margin:0;border:0;cursor:pointer;
+  border-radius:2px;overflow:hidden;font:inherit;color:inherit;text-decoration:none;
+  box-shadow:0 1px 0 rgba(255,255,255,.4) inset,2px 3px 6px rgba(0,0,0,.35);
+  transition:transform .18s cubic-bezier(.3,1.4,.5,1),box-shadow .18s;
+  -webkit-user-select:none;user-select:none;touch-action:manipulation;
+}
+.comic:hover,.comic:focus-visible,.comic:active,.comic.lift{
+  transform:translateY(calc(var(--cw)*-.13)) scale(1.03);
+  box-shadow:4px 10px 18px rgba(0,0,0,.45);
+}
+.comic:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.pocket.L .comic::after,.pocket.R .comic::after{ /* side shading */
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(90deg,rgba(0,0,0,.5),rgba(0,0,0,.2));
+}
+.pocket.R .comic::after{background:linear-gradient(270deg,rgba(0,0,0,.5),rgba(0,0,0,.2))}
+.comic.real{background:#222}
+.comic.real img{width:100%;height:100%;object-fit:cover;object-position:50% 50%;display:block;pointer-events:none}
+.comic.real::before{ /* glossy cover sheen */
+  content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:linear-gradient(115deg,rgba(255,255,255,.28),rgba(255,255,255,0) 35%,rgba(255,255,255,0) 70%,rgba(255,255,255,.12));
+}
+.badge{
+  position:absolute;z-index:4;top:calc(var(--ch)*.5);right:calc(var(--cw)*-.24);pointer-events:none;
+  width:calc(var(--cw)*.4);height:calc(var(--cw)*.4);display:grid;place-items:center;
+  font-family:var(--comic-font);font-size:calc(var(--cw)*.14);color:#fff;letter-spacing:.03em;line-height:1;
+  background:#e0262f;transform:rotate(12deg);text-shadow:1px 1px 0 #000;
+  clip-path:polygon(50% 0,61% 18%,82% 8%,80% 30%,100% 38%,84% 52%,98% 70%,76% 74%,76% 96%,58% 84%,44% 100%,36% 80%,14% 92%,18% 70%,0 60%,16% 46%,4% 26%,26% 24%,26% 4%,42% 16%);
+  animation:pop 2.4s ease-in-out infinite;
+}
+@keyframes pop{0%,100%{transform:rotate(12deg) scale(1)}50%{transform:rotate(6deg) scale(1.1)}}
+.read-tag{
+  position:absolute;z-index:4;left:50%;top:calc(var(--ch)*.64);transform:translateX(-50%);
+  pointer-events:none;white-space:nowrap;padding:3px 8px 2px;border-radius:999px;
+  background:#111;color:#ffc61a;border:2px solid #ffc61a;
+  font:800 calc(var(--cw)*.075)/1.2 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;letter-spacing:.12em;
+  box-shadow:0 3px 6px rgba(0,0,0,.4);
+}
+
+/* placeholder comics */
+.comic.ph{
+  background:
+    radial-gradient(rgba(255,255,255,.08) 22%,transparent 24%) 0 0/7px 7px,
+    linear-gradient(165deg,var(--ph1),var(--ph2));
+  color:#fff;text-align:center;
+}
+.ph-mast{
+  position:absolute;left:0;right:0;top:0;height:18%;display:grid;place-items:center;
+  background:var(--paper);color:var(--ink);opacity:.55;
+  font-family:var(--comic-font);font-size:calc(var(--cw)*.14);letter-spacing:.04em;line-height:1;white-space:nowrap;overflow:hidden;
+}
+.ph-sil{position:absolute;left:18%;width:64%;top:22%;height:52%;fill:rgba(0,0,0,.42)}
+.ph-q{
+  position:absolute;left:0;right:0;top:30%;font-family:var(--comic-font);font-size:calc(var(--cw)*.42);
+  line-height:1;color:rgba(255,255,255,.22);
+}
+.ph-num{
+  position:absolute;left:0;right:0;bottom:30%;font-family:var(--comic-font);
+  font-size:calc(var(--cw)*.2);line-height:1;color:rgba(255,255,255,.88);letter-spacing:.04em;
+  text-shadow:2px 2px 0 rgba(0,0,0,.5);
+}
+.ph-soon{
+  position:absolute;left:-12%;right:-12%;top:44%;padding:3px 0 2px;transform:rotate(-12deg);
+  background:var(--accent);color:var(--accent-ink);font-family:var(--comic-font);
+  font-size:calc(var(--cw)*.13);letter-spacing:.06em;line-height:1.1;box-shadow:0 2px 0 rgba(0,0,0,.35);
+}
+.comic.ph:hover .ph-sil{fill:rgba(0,0,0,.55)}
+.pocket:has(.comic:hover) .read-tag,.pocket:has(.comic:active) .read-tag{transform:translate(-50%,calc(var(--cw)*-.13))}
+.read-tag{transition:transform .18s cubic-bezier(.3,1.4,.5,1)}
+
+/* themes */
+.t-dot  {--paper:#ffc61a;--ink:#111;--sign-shadow:#e0262f;--ph1:#4a3d1c;--ph2:#1d1a14;--accent:#ffc61a;--accent-ink:#111}
+.t-corpo{--paper:#16a6b8;--ink:#082531;--sign-shadow:rgba(255,255,255,.45);--ph1:#164a55;--ph2:#0d1d24;--accent:#e9fbff;--accent-ink:#0b5363}
+.t-new  {--paper:#e0262f;--ink:#fff8e6;--sub:#e0262f;--sign-shadow:#000;--ph1:#3d2a52;--ph2:#17121f;--accent:#ff4fa3;--accent-ink:#fff}
+.t-new .sign-face{border-color:#fff8e6;box-shadow:inset 0 0 0 2px rgba(0,0,0,.25),0 6px 10px rgba(0,0,0,.3)}
+.t-new .sign-face::after{border-color:#fff8e6}
+
+/* ---------- base ---------- */
+.base{display:block;width:calc(var(--cw)*1.9);height:calc(var(--cw)*.38);margin-top:calc(var(--cw)*-.02);position:relative;z-index:0;overflow:visible}
+
+/* ---------- phone dots / arrows ---------- */
+.nav{position:absolute;left:0;right:0;bottom:22px;display:flex;justify-content:center;align-items:center;gap:6px;z-index:40}
+.dots{display:flex;gap:4px;padding:5px 8px;border-radius:999px;background:rgba(20,10,5,.55)}
+.dot{width:26px;height:26px;border:0;padding:0;background:none;cursor:pointer;display:grid;place-items:center}
+.dot::before{content:"";width:10px;height:10px;border-radius:50%;background:rgba(255,240,215,.45);transition:all .2s}
+.dot[aria-current="true"]::before{background:#ffc61a;width:22px;border-radius:6px}
+.arrow{
+  position:absolute;top:calc(var(--header-h) + 38%);z-index:45;width:40px;height:40px;border-radius:50%;
+  border:2px solid rgba(255,255,255,.85);background:rgba(20,10,5,.55);color:#fff;font:700 20px/1 system-ui,sans-serif;
+  display:grid;place-items:center;cursor:pointer;transition:opacity .2s;padding:0;
+}
+.arrow.prev{left:6px}.arrow.next{right:6px}
+.arrow[disabled]{opacity:0;pointer-events:none}
+
+/* ---------- footer (sits on the floor) ---------- */
+footer{position:absolute;left:0;right:0;bottom:3px;line-height:16px;text-align:center;z-index:41;font-size:12px;letter-spacing:.06em}
+footer a{color:#f6e6c8;text-decoration:none;opacity:.85;padding:4px 8px}
+footer a:hover{opacity:1;text-decoration:underline}
+
+/* ---------- toast ---------- */
+.toast{
+  position:fixed;left:50%;bottom:calc(var(--foot-h) + 18px);z-index:100;transform:translate(-50%,20px);opacity:0;
+  background:#111;color:#ffc61a;border:2px solid #ffc61a;border-radius:999px;padding:8px 16px;
+  font:700 14px/1.2 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;letter-spacing:.04em;white-space:nowrap;
+  box-shadow:0 6px 16px rgba(0,0,0,.4);transition:opacity .2s,transform .2s;pointer-events:none;
+}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* ---------- desktop: three racks side by side ---------- */
+@media (min-width:900px){
+  :root{
+    --header-h:72px;--foot-h:34px;
+    --cw:clamp(96px, min(calc((100vw - 120px) / 7.4), calc((100vh - var(--header-h) - var(--foot-h) - 30px) / 4.9)), 200px);
+  }
+  @supports (height:100svh){
+    :root{--cw:clamp(96px, min(calc((100vw - 120px) / 7.4), calc((100svh - var(--header-h) - var(--foot-h) - 30px) / 4.9)), 200px)}
+  }
+  .shop-sign img{height:46px}
+  .shop-sign h1{font-size:42px}
+  .shop-sign .tag{display:block}
+  .racks{justify-content:center;gap:calc(var(--cw)*.42);overflow:visible;padding:22px 20px 0;scroll-snap-type:none}
+  .rack{flex:0 0 auto}
+  .nav,.arrow{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .badge{animation:none}.racks{scroll-behavior:auto}.comic{transition:none}
+}
+</style>
+</head>
+<body>
+<header class="shop-sign">
+  <a class="home" href="./" aria-label="BodyByDOT Comics home">
+    <img src="assets/bodybydot-logo.png" width="72" height="34" alt="BodyByDOT logo">
+    <h1>BODY BY DOT COMICS</h1>
+  </a>
+  <span class="tag">Free interactive comics</span>
+</header>
+
+<main class="store" id="store">
+  <div class="floor" aria-hidden="true"></div>
+  <div class="racks" id="racks" aria-label="Comic racks"></div>
+  <button class="arrow prev" id="prev" type="button" aria-label="Previous rack">&#8249;</button>
+  <button class="arrow next" id="next" type="button" aria-label="Next rack">&#8250;</button>
+  <nav class="nav" aria-label="Choose a rack"><div class="dots" id="dots"></div></nav>
+  <footer><a href="https://bodybydot.com" target="_blank" rel="noopener">BodyByDOT.com &#8599;</a></footer>
+  <noscript><p style="text-align:center;padding:20px"><a href="issue-0/">Read BODY BY DOT Fantasy Series Issue #0</a></p></noscript>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- shared drawings -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="sil" viewBox="0 0 100 120">
+      <circle cx="50" cy="20" r="12"/>
+      <path d="M50 34c-12 0-22 4-26 10L8 76l9 4 13-24 2 30-20 34h76L68 86l2-30 13 24 9-4L76 44c-4-6-14-10-26-10z"/>
+    </symbol>
+    <linearGradient id="baseTop" x1="0" x2="1">
+      <stop offset="0" stop-color="#2a2d31"/><stop offset=".45" stop-color="#5d636b"/><stop offset="1" stop-color="#1d1f22"/>
+    </linearGradient>
+    <linearGradient id="stem" x1="0" x2="1">
+      <stop offset="0" stop-color="#6f757c"/><stop offset=".42" stop-color="#ffffff"/><stop offset="1" stop-color="#5f656c"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<script>
+(function () {
+  'use strict';
+  var racksEl = document.getElementById('racks');
+  var dotsEl = document.getElementById('dots');
+  var toastEl = document.getElementById('toast');
+  var THEMES = { dot: 't-dot', corpo: 't-corpo', 'new': 't-new' };
+
+  function el(tag, cls, html) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (html != null) n.innerHTML = html;
+    return n;
+  }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return '&#' + c.charCodeAt(0) + ';'; }); }
+
+  // slot index -> pocket position. Front (center) pockets first, top to bottom, then sides.
+  function fillOrder(slots) {
+    var tiers = Math.ceil(slots / 3), order = [], t;
+    for (t = 0; t < tiers; t++) order.push(t * 3 + 1);
+    for (t = 0; t < tiers; t++) order.push(t * 3, t * 3 + 2);
+    return order.filter(function (p) { return p < tiers * 3; }).slice(0, slots);
+  }
+
+  function realComic(rack, issue) {
+    var a = el('a', 'comic real');
+    a.href = issue.href;
+    var label = rack.series + (rack.sub ? ' ' + rack.sub : '') + ' ' + issue.title;
+    a.setAttribute('aria-label', 'Read ' + label);
+    var img = new Image();
+    img.src = issue.thumb; img.alt = label + ' cover'; img.decoding = 'async';
+    img.width = 340; img.height = 440;
+    a.appendChild(img);
+    return a;
+  }
+
+  function placeholder(rack, num) {
+    var b = el('button', 'comic ph');
+    b.type = 'button';
+    var mast = rack.mystery ? 'NEW SERIES' : rack.series;
+    var title = rack.mystery ? '' : 'ISSUE #' + num;
+    b.innerHTML =
+      '<span class="ph-mast">' + esc(mast) + '</span>' +
+      '<svg class="ph-sil" viewBox="0 0 100 120" aria-hidden="true"><use href="#sil"/></svg>' +
+      (rack.mystery ? '<span class="ph-q">?</span>' : '') +
+      '<span class="ph-soon">COMING SOON</span>' +
+      (title ? '<span class="ph-num">' + title + '</span>' : '');
+    var msg = rack.mystery ? 'A new series is coming soon!' : rack.series + ' ' + title + ' is coming soon!';
+    b.setAttribute('aria-label', msg);
+    b.dataset.msg = msg;
+    return b;
+  }
+
+  var BASE_SVG =
+    '<svg class="base" viewBox="0 0 200 46" preserveAspectRatio="none" aria-hidden="true">' +
+      '<ellipse cx="100" cy="36" rx="98" ry="9" fill="rgba(0,0,0,.35)"/>' +
+      '<rect x="94" y="0" width="12" height="20" fill="url(#stem)"/>' +
+      '<path d="M8 26 Q8 14 100 14 Q192 14 192 26 L192 31 Q192 42 100 42 Q8 42 8 31 Z" fill="#141518"/>' +
+      '<ellipse cx="100" cy="25" rx="92" ry="10.5" fill="url(#baseTop)"/>' +
+      '<ellipse cx="100" cy="25" rx="92" ry="10.5" fill="none" stroke="#c9cfd6" stroke-width="1.6"/>' +
+      '<ellipse cx="100" cy="22" rx="13" ry="3.2" fill="#9aa1a9"/>' +
+    '</svg>';
+
+  RACKS.forEach(function (rack, r) {
+    var slots = rack.slots || 9;
+    var tiers = Math.ceil(slots / 3);
+    var issues = rack.issues || [];
+    var nPh = rack.placeholders != null ? rack.placeholders : Math.max(0, slots - issues.length);
+    var firstNum = (rack.firstIssue || 0) + issues.length;
+
+    // what goes in each pocket
+    var content = new Array(tiers * 3);
+    fillOrder(slots).forEach(function (pos, i) {
+      if (i < issues.length) content[pos] = { issue: issues[i] };
+      else if (i < issues.length + nPh) content[pos] = { ph: firstNum + (i - issues.length) };
+    });
+
+    var sec = el('section', 'rack ' + (THEMES[rack.theme] || 't-dot'));
+    sec.id = 'rack-' + (r + 1);
+    sec.tabIndex = -1;
+    sec.setAttribute('aria-label', rack.series + (rack.sub ? ' ' + rack.sub : '') + ' rack');
+
+    var sign = el('div', 'sign');
+    sign.innerHTML = '<div class="sign-face"><span class="sign-title">' + esc(rack.series) + '</span>' +
+      (rack.sub ? '<span class="sign-sub">' + esc(rack.sub) + '</span>' : '') + '</div><div class="post"></div>';
+    sec.appendChild(sign);
+    sec.appendChild(el('div', 'crown'));
+
+    var tower = el('div', 'tower');
+    tower.appendChild(el('div', 'pole'));
+    for (var t = 0; t < tiers; t++) {
+      var tier = el('div', 'tier');
+      tier.style.zIndex = 10 + t;
+      ['L', 'C', 'R'].forEach(function (side, s) {
+        var pos = t * 3 + s;
+        if (pos >= slots && side !== 'C') { tier.appendChild(el('div', 'pocket ' + side)); return; }
+        var pocket = el('div', 'pocket ' + side);
+        var c = content[pos];
+        if (side === 'C' && c && c.issue) tier.classList.add('featured');
+        if (c && c.issue) {
+          pocket.appendChild(realComic(rack, c.issue));
+          if (c.issue.badge && side === 'C') {
+            pocket.appendChild(el('span', 'badge', esc(c.issue.badge)));
+            pocket.appendChild(el('span', 'read-tag', 'READ NOW &#9654;'));
+          }
+        } else if (c && c.ph != null) {
+          pocket.appendChild(placeholder(rack, c.ph));
+        }
+        if (pos < slots) pocket.appendChild(el('span', 'lip'));
+        tier.appendChild(pocket);
+      });
+      tower.appendChild(tier);
+    }
+    sec.appendChild(tower);
+    sec.insertAdjacentHTML('beforeend', BASE_SVG);
+    racksEl.appendChild(sec);
+
+    var dot = el('button', 'dot');
+    dot.type = 'button';
+    dot.setAttribute('aria-label', 'Show ' + rack.series + ' rack');
+    dot.addEventListener('click', function () { go(r); });
+    dotsEl.appendChild(dot);
+  });
+
+  // ---- toast for placeholders ----
+  var toastTimer;
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 1800);
+  }
+  racksEl.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('.comic.ph');
+    if (!b) return;
+    var tier = b.closest('.tier');
+    b.classList.add('lift'); tier.classList.add('lifted');
+    setTimeout(function () { b.classList.remove('lift'); tier.classList.remove('lifted'); }, 450);
+    toast(b.dataset.msg);
+  });
+  // lets :active lift comics on iOS touch
+  document.addEventListener('touchstart', function () {}, { passive: true });
+
+  // ---- phone carousel: dots + arrows ----
+  var slides = racksEl.children, dots = dotsEl.children;
+  var prevBtn = document.getElementById('prev'), nextBtn = document.getElementById('next');
+  var current = -1;
+  function nearest() {
+    var mid = racksEl.scrollLeft + racksEl.clientWidth / 2, best = 0, bestD = Infinity;
+    for (var i = 0; i < slides.length; i++) {
+      var s = slides[i], c = s.offsetLeft + s.offsetWidth / 2, d = Math.abs(c - mid);
+      if (d < bestD) { bestD = d; best = i; }
+    }
+    return best;
+  }
+  function update() {
+    var i = nearest();
+    if (i === current) return;
+    current = i;
+    for (var k = 0; k < dots.length; k++) dots[k].setAttribute('aria-current', k === i ? 'true' : 'false');
+    prevBtn.disabled = i === 0;
+    nextBtn.disabled = i === slides.length - 1;
+  }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i));
+    var s = slides[i];
+    racksEl.scrollTo({ left: s.offsetLeft + s.offsetWidth / 2 - racksEl.clientWidth / 2 });
+  }
+  prevBtn.addEventListener('click', function () { go(nearest() - 1); });
+  nextBtn.addEventListener('click', function () { go(nearest() + 1); });
+  var ticking = false;
+  racksEl.addEventListener('scroll', function () {
+    if (ticking) return; ticking = true;
+    requestAnimationFrame(function () { ticking = false; update(); });
+  }, { passive: true });
+  window.addEventListener('resize', function () { current = -1; update(); });
+  update();
+})();
+</script>
+</body>
+</html>

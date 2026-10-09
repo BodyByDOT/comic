@@ -1,0 +1,1604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>BodyByDOT Fantasy — Issue 0 TEST (Comic Template v2)</title>
+<style>
+  :root {
+    --desk-white: #f4f2ee;
+    --desk-white-2: #ebe8e2;
+    --wood1: #c4a574;
+    --wood2: #a8875a;
+    --wood3: #8b6b42;
+    --hint: #2a2218;
+    --hint-light: #f5ecd8;
+    --accent: #f5c518;
+    --ink: #111;
+    --gutter: #0a0a0a;
+    --pulp: #fffef9;
+    --pulp2: #f7f2e8;
+    --page-edge: #d8d0c0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    color: var(--hint);
+    font-family: "Comic Sans MS", "Chalkboard SE", "Segoe UI", system-ui, sans-serif;
+    overflow: hidden;
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  /* Landing = bright white desk (landing-ref). Open = wood table (spread-open-ref). */
+  body {
+    background: var(--desk-white);
+    transition: background .55s ease;
+  }
+  body.mode-open {
+    background:
+      radial-gradient(ellipse at 50% 40%, rgba(255,255,255,.18), transparent 55%),
+      repeating-linear-gradient(
+        90deg,
+        var(--wood1) 0px, var(--wood2) 4px, var(--wood1) 8px, var(--wood3) 12px, var(--wood2) 16px
+      );
+  }
+
+  #hud {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; padding: 8px 12px;
+    background: linear-gradient(180deg, rgba(0,0,0,.55), transparent);
+    pointer-events: none;
+  }
+  body:not(.mode-open) #hud {
+    background: linear-gradient(180deg, rgba(255,255,255,.65), transparent);
+  }
+  #hud .left, #hud .right { display: flex; gap: 6px; align-items: center; pointer-events: auto; }
+  .badge {
+    background: rgba(0,0,0,.78); border: 2px solid var(--accent);
+    color: var(--accent); font-weight: 800; font-size: 11px;
+    letter-spacing: .06em; text-transform: uppercase;
+    padding: 5px 10px; border-radius: 4px;
+  }
+  .btn {
+    background: rgba(20,14,10,.88); border: 1px solid #8a7355;
+    color: var(--hint-light); font: inherit; font-size: 12px; font-weight: 700;
+    padding: 6px 10px; border-radius: 4px; cursor: pointer;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn:disabled { opacity: .35; cursor: default; }
+  .btn.bookmark {
+    min-width: 38px;
+    font-size: 15px;
+    line-height: 1;
+    padding: 5px 10px;
+  }
+  .btn.bookmark.saved {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(245,197,24,.14);
+  }
+  .btn.bookmark.on-mark {
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+
+  #hint {
+    position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%);
+    z-index: 50; background: rgba(0,0,0,.72); color: var(--hint-light);
+    padding: 8px 14px; border-radius: 20px; font-size: 12px;
+    letter-spacing: .02em; pointer-events: none; transition: opacity .3s;
+    max-width: 92vw; text-align: center;
+  }
+  #hint.hide { opacity: 0; }
+
+  #stage {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    perspective: 1600px;
+    overflow: hidden;
+  }
+
+  /* Desk props (landing-ref vibe — stylus hint, soft room) */
+  #desk-props {
+    position: absolute; inset: 0; pointer-events: none; z-index: 0;
+    opacity: 1; transition: opacity .45s ease;
+  }
+  body.mode-open #desk-props { opacity: 0; }
+  .stylus {
+    position: absolute; left: 8%; bottom: 22%;
+    width: 7px; height: 118px;
+    background: linear-gradient(180deg, #1a1a1a, #333 40%, #111);
+    border-radius: 4px;
+    transform: rotate(-28deg);
+    box-shadow: 2px 4px 10px rgba(0,0,0,.18);
+  }
+  .stylus::after {
+    content: "";
+    position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
+    width: 14px; height: 14px; border-radius: 50%;
+    background: #222; border: 2px solid #444;
+  }
+  .laptop-edge {
+    position: absolute; top: 0; left: 0;
+    width: 28%; height: 14%;
+    background: linear-gradient(135deg, #c8ccd0, #aeb4ba);
+    border-radius: 0 0 8px 0;
+    box-shadow: 0 2px 12px rgba(0,0,0,.08);
+    opacity: .55;
+  }
+
+  /* ===== COVER — lands angled on WHITE desk (landing-ref) ===== */
+  #cover-view {
+    position: relative; z-index: 2;
+    width: min(48vh, 44vw, 440px);
+    aspect-ratio: 8.5 / 11;
+    transform-origin: 50% 80%;
+    animation: landOnDesk 1.25s cubic-bezier(.18,.82,.22,1) both;
+    cursor: pointer;
+  }
+  @keyframes landOnDesk {
+    0%   {
+      transform: translateY(-70vh) rotate(-14deg) scale(1.08);
+      opacity: 0;
+      filter: drop-shadow(0 0 0 transparent);
+    }
+    55%  {
+      transform: translateY(8px) rotate(11deg) scale(1.01);
+      opacity: 1;
+      filter: drop-shadow(18px 28px 32px rgba(0,0,0,.28));
+    }
+    72%  {
+      transform: translateY(-4px) rotate(7deg) scale(1);
+    }
+    100% {
+      transform: translateY(0) rotate(9deg) scale(1);
+      filter: drop-shadow(14px 22px 28px rgba(0,0,0,.22));
+    }
+  }
+  #cover-view.opening {
+    animation: foldOpen .7s cubic-bezier(.4,.0,.2,1) forwards;
+    pointer-events: none;
+  }
+  @keyframes foldOpen {
+    0%   { transform: translateY(0) rotate(9deg) scale(1); opacity: 1; }
+    45%  { transform: translateX(-8%) rotateY(-42deg) rotate(4deg) scale(1.05); opacity: 1; }
+    100% { transform: translateX(-28%) rotateY(-88deg) rotate(0deg) scale(.92); opacity: 0; }
+  }
+  .comic-object {
+    width: 100%; height: 100%;
+    border-radius: 2px 5px 5px 2px;
+    box-shadow:
+      0 1px 0 rgba(0,0,0,.25),
+      0 18px 40px rgba(0,0,0,.2),
+      6px 14px 24px rgba(0,0,0,.14),
+      inset -2px 0 0 rgba(255,255,255,.12);
+    overflow: hidden; position: relative; background: #111;
+  }
+  /* Gloss sheen when it hits the table (landing-ref) */
+  .comic-object::after {
+    content: "";
+    position: absolute; inset: 0; pointer-events: none; z-index: 6;
+    background: linear-gradient(
+      125deg,
+      rgba(255,255,255,.38) 0%,
+      rgba(255,255,255,.08) 18%,
+      transparent 38%,
+      transparent 70%,
+      rgba(255,255,255,.06) 100%
+    );
+    mix-blend-mode: soft-light;
+  }
+  .comic-object > img.cover-art {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; object-position: center 28%;
+  }
+  .cover-plate {
+    position: absolute; left: 6%; right: 6%; top: 8%; z-index: 3;
+    background: linear-gradient(180deg, #f7e7b0, #e2c46a);
+    border: 3px solid #1a120c; box-shadow: 3px 3px 0 rgba(0,0,0,.45);
+    padding: 8px 10px; text-align: center; color: #1a120c;
+  }
+  .cover-plate .series {
+    font-size: clamp(10px, 2.4vh, 13px); font-weight: 900;
+    letter-spacing: .08em; text-transform: uppercase;
+  }
+  .cover-plate .issue {
+    font-size: clamp(16px, 3.6vh, 22px); font-weight: 900;
+    line-height: 1.15; margin-top: 2px;
+  }
+  .cover-plate .sub {
+    font-size: clamp(9px, 2vh, 11px); margin-top: 4px; font-weight: 700;
+  }
+  .price-box {
+    position: absolute; top: 3%; left: 4%; z-index: 3;
+    background: #fffef8; border: 2px solid #111; color: #111;
+    font-family: system-ui, sans-serif; font-size: 9px; font-weight: 800;
+    padding: 4px 6px; line-height: 1.25; text-align: center;
+  }
+  .test-stamp {
+    position: absolute; bottom: 7%; right: 5%; z-index: 3;
+    transform: rotate(-12deg);
+    border: 3px solid #c41e3a; color: #c41e3a;
+    font-weight: 900; font-size: clamp(14px, 3.2vh, 20px);
+    letter-spacing: .12em; padding: 4px 10px;
+    background: rgba(255,255,255,.15);
+  }
+  .open-cue {
+    position: absolute; bottom: 3%; left: 0; right: 0; z-index: 3;
+    text-align: center; color: #fff; font-size: 11px; font-weight: 700;
+    text-shadow: 0 1px 4px #000; letter-spacing: .04em;
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse { 50% { opacity: .45; } }
+
+  /* ===== READER — physical thick open book (spread-open-ref → spread-flat-ref) ===== */
+  #reader {
+    display: none;
+    width: 100%; height: 100%;
+    align-items: center; justify-content: center;
+    position: relative; z-index: 2;
+  }
+  #reader.active { display: flex; }
+
+  #book-wrap {
+    position: relative;
+    width: min(96vw, calc(90vh * 17 / 11));
+    height: min(90vh, calc(96vw * 11 / 17));
+    max-height: 90vh;
+    filter: drop-shadow(0 22px 40px rgba(0,0,0,.45));
+    animation: bookSettle .75s cubic-bezier(.2,.8,.2,1) both;
+  }
+  @keyframes bookSettle {
+    0%   { transform: rotateX(18deg) scale(.88); opacity: 0; }
+    55%  { transform: rotateX(4deg) scale(1.02); opacity: 1; }
+    100% { transform: rotateX(0) scale(1); opacity: 1; }
+  }
+
+  #book {
+    position: relative;
+    display: flex;
+    width: 100%; height: 100%;
+    transform-style: preserve-3d;
+    transform-origin: 50% 50%;
+  }
+  #book.zoomed { cursor: zoom-out; }
+  #book.flipping { pointer-events: none; }
+
+  /* Page stack thickness (spread-open-ref) */
+  .page-stack {
+    position: absolute; top: 1.5%; bottom: 1.5%; width: 10px; z-index: 1;
+    background: repeating-linear-gradient(
+      180deg,
+      #f0ebe0 0px, #e4dcc8 1px, #d2c8b4 2px, #f0ebe0 3px
+    );
+    box-shadow: inset 0 0 4px rgba(0,0,0,.15);
+    pointer-events: none;
+  }
+  .page-stack.left-stack {
+    left: -7px;
+    border-radius: 3px 0 0 3px;
+    transform: perspective(400px) rotateY(18deg);
+  }
+  .page-stack.right-stack {
+    right: -7px;
+    border-radius: 0 3px 3px 0;
+    transform: perspective(400px) rotateY(-18deg);
+  }
+  .cover-lip {
+    position: absolute; left: -11px; top: 0; bottom: 0; width: 8px;
+    background: linear-gradient(90deg, #2a4a7a, #3d6aad);
+    border-radius: 2px 0 0 2px;
+    box-shadow: -2px 0 6px rgba(0,0,0,.25);
+    z-index: 0; pointer-events: none;
+  }
+
+  .page {
+    position: relative;
+    width: 50%; height: 100%;
+    background: var(--pulp);
+    overflow: hidden;
+    z-index: 2;
+  }
+  .page.left {
+    border-radius: 3px 0 0 3px;
+    background:
+      linear-gradient(90deg, rgba(0,0,0,.1) 0%, transparent 6%),
+      linear-gradient(270deg, rgba(0,0,0,.06) 0%, transparent 10%),
+      linear-gradient(180deg, #fffef9 0%, var(--pulp2) 100%);
+    box-shadow: inset -10px 0 20px rgba(0,0,0,.08);
+    /* slight lift/curve like spread-open-ref left page */
+    transform-origin: right center;
+    transform: perspective(900px) rotateY(2.5deg);
+  }
+  .page.right {
+    border-radius: 0 3px 3px 0;
+    background:
+      linear-gradient(270deg, rgba(0,0,0,.08) 0%, transparent 6%),
+      linear-gradient(90deg, rgba(0,0,0,.05) 0%, transparent 10%),
+      linear-gradient(180deg, #fffef9 0%, var(--pulp2) 100%);
+    box-shadow: inset 10px 0 18px rgba(0,0,0,.06);
+    transform-origin: left center;
+    transform: perspective(900px) rotateY(-1deg);
+  }
+  .spine {
+    position: absolute; left: 50%; top: 0; bottom: 0; width: 18px;
+    transform: translateX(-50%);
+    background: linear-gradient(90deg,
+      rgba(0,0,0,.4), rgba(0,0,0,.15) 30%,
+      rgba(255,255,255,.12) 48%,
+      rgba(0,0,0,.12) 62%, rgba(0,0,0,.38));
+    z-index: 5; pointer-events: none;
+    box-shadow: 0 0 16px rgba(0,0,0,.25);
+  }
+
+  .inside-cover {
+    width: 100%; height: 100%;
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.35), transparent 50%),
+      repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,.012) 3px, rgba(0,0,0,.012) 4px),
+      var(--pulp2);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 8%;
+  }
+  .inside-cover .mark {
+    font-size: clamp(11px, 2.2vh, 14px); color: #a89070;
+    font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    text-align: center; line-height: 1.5;
+  }
+  .inside-cover .tiny {
+    margin-top: 18%; font-size: 10px; color: #b8a080; text-align: center;
+  }
+
+  /* Comic page grids — black gutters (page-open-ref) + white page margin (spread-flat-ref) */
+  .comic-page {
+    position: absolute; inset: 4% 4.5% 5% 5.5%;
+    display: grid;
+    gap: 2.4%;
+    background: var(--gutter);
+    padding: 2.4%;
+    border: 1px solid #1a1a1a;
+  }
+  .page.left .comic-page { inset: 4% 5.5% 5% 4.5%; }
+
+  .grid-2x3 {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr 1fr;
+  }
+  .grid-2x2 {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+  }
+  /* page-open-ref: large top + mid split + bottom split */
+  .grid-hero-top {
+    grid-template-columns: 1fr 1.55fr;
+    grid-template-rows: 1.35fr 1fr 1fr;
+  }
+  .grid-hero-top .panel:nth-child(1) { grid-column: 1 / -1; }
+  .grid-hero-bottom {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr 1.2fr;
+  }
+  .grid-hero-bottom .panel:nth-child(5) { grid-column: 1 / -1; }
+  .grid-spread-flat-right {
+    /* spread-flat page 71 style: 2+2+wide */
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr 1.15fr;
+  }
+  .grid-spread-flat-right .panel:nth-child(5) { grid-column: 1 / -1; }
+
+  .panel {
+    position: relative;
+    background: #111;
+    overflow: hidden;
+    cursor: zoom-in;
+    border: 1.5px solid #000;
+    min-height: 0;
+    transition: outline .15s, transform .15s;
+  }
+  .panel:hover { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .panel img {
+    width: 100%; height: 100%;
+    object-fit: cover; object-position: center;
+    display: block; pointer-events: none;
+  }
+  .panel .cap {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,.72); color: #f5ecd8;
+    font-family: system-ui, sans-serif;
+    font-size: clamp(8px, 1.35vh, 11px);
+    font-weight: 600; line-height: 1.25;
+    padding: 3px 5px;
+  }
+  .panel .balloon {
+    position: absolute; top: 4%; left: 4%; right: 18%;
+    background: #fffef5; color: #111;
+    border: 1.5px solid #111; border-radius: 10px;
+    font-family: system-ui, sans-serif;
+    font-size: clamp(8px, 1.3vh, 11px);
+    font-weight: 700; line-height: 1.2;
+    padding: 4px 6px;
+    box-shadow: 1px 1px 0 #111;
+    max-width: 88%;
+    z-index: 2;
+  }
+  .panel .balloon.right { left: auto; right: 4%; }
+
+  .page-num {
+    position: absolute; bottom: 1.2%;
+    font-family: system-ui, sans-serif;
+    font-size: 9px; color: #8a7355; font-weight: 700;
+  }
+  .page.left .page-num { left: 4%; }
+  .page.right .page-num { right: 4%; }
+
+  .end-page {
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 8%; gap: 12px; text-align: center;
+    background: radial-gradient(ellipse at 50% 40%, #fff8e8, var(--pulp));
+  }
+  .end-page img {
+    width: 88%; max-height: 55%; object-fit: contain;
+    border: 3px solid #111; box-shadow: 4px 4px 0 rgba(0,0,0,.25);
+  }
+  .end-page h2 {
+    color: #1a120c; font-size: clamp(16px, 3.5vh, 26px); font-weight: 900;
+  }
+  .end-page p { color: #5a4830; font-size: 12px; font-weight: 600; }
+  .end-page .test-stamp {
+    position: relative; bottom: auto; right: auto; margin-top: 8px;
+  }
+
+  /* Zoom overlay — inspect one storyboard square */
+  #zoom-layer {
+    display: none;
+    position: fixed; inset: 0; z-index: 40;
+    background: rgba(8,6,4,.9);
+    align-items: center; justify-content: center;
+    cursor: zoom-out;
+  }
+  #zoom-layer.active { display: flex; }
+  #zoom-frame {
+    position: relative;
+    width: min(92vw, 92vh * 16 / 9);
+    height: min(86vh, 92vw * 9 / 16);
+    max-width: 1100px;
+    background: #000;
+    border: 3px solid #f5c518;
+    box-shadow: 0 20px 60px rgba(0,0,0,.8);
+    overflow: hidden;
+    transform: scale(.92); opacity: 0;
+    transition: transform .28s ease, opacity .28s ease;
+  }
+  #zoom-layer.active #zoom-frame { transform: scale(1); opacity: 1; }
+  #zoom-frame img {
+    width: 100%; height: 100%; object-fit: contain; background: #111;
+  }
+  #zoom-caption {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,.8); color: #f5ecd8;
+    font-family: system-ui, sans-serif; font-size: 13px;
+    padding: 8px 12px; font-weight: 600;
+  }
+  #zoom-balloon {
+    position: absolute; top: 4%; left: 4%;
+    background: #fffef5; color: #111; border: 2px solid #111;
+    border-radius: 12px; padding: 8px 12px;
+    font-family: system-ui, sans-serif; font-size: 14px; font-weight: 700;
+    max-width: 70%; box-shadow: 2px 2px 0 #111;
+    display: none;
+  }
+
+  /* Full-screen side click zones — same as ← / → (Boss ask) */
+  .edge-hit {
+    position: fixed; top: 52px; bottom: 0; width: 16vw; max-width: 140px; min-width: 56px;
+    z-index: 40; cursor: pointer;
+    display: none; /* shown only when book is open */
+    align-items: center; justify-content: center;
+    color: rgba(245,197,24,.0);
+    font-size: 42px; font-weight: 900; line-height: 1;
+    transition: background .15s ease, color .15s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body.mode-open .edge-hit { display: flex; }
+  .edge-hit.left { left: 0; background: linear-gradient(90deg, rgba(0,0,0,.12), transparent); }
+  .edge-hit.right { right: 0; background: linear-gradient(270deg, rgba(0,0,0,.12), transparent); }
+  .edge-hit.left::after { content: "‹"; }
+  .edge-hit.right::after { content: "›"; }
+  .edge-hit:hover {
+    color: rgba(245,197,24,.85);
+  }
+  .edge-hit.right:hover { background: linear-gradient(270deg, rgba(245,197,24,.14), transparent); }
+  .edge-hit.left:hover { background: linear-gradient(90deg, rgba(245,197,24,.14), transparent); }
+  @media (max-width: 700px) {
+    .edge-hit { width: 18vw; min-width: 44px; font-size: 36px; top: 48px; }
+  }
+
+
+  /* Realistic page-curl overlay (skeuomorphic turn — clip vibe) */
+  #page-curl {
+    position: absolute; top: 0; bottom: 0; width: 50%;
+    right: 0; z-index: 12; pointer-events: none;
+    transform-origin: left center;
+    opacity: 0; visibility: hidden;
+    background:
+      linear-gradient(90deg,
+        rgba(0,0,0,.35) 0%,
+        rgba(0,0,0,.08) 8%,
+        #f7f2e8 14%,
+        #fffef9 55%,
+        #efe8da 100%);
+    box-shadow:
+      -12px 0 28px rgba(0,0,0,.35),
+      inset 8px 0 16px rgba(0,0,0,.12);
+    border-radius: 0 3px 3px 0;
+  }
+  #page-curl::before {
+    content: "";
+    position: absolute; left: 0; top: 0; bottom: 0; width: 18%;
+    background: linear-gradient(90deg, rgba(0,0,0,.25), transparent);
+  }
+  #page-curl::after {
+    content: "";
+    position: absolute; right: 0; top: 0; bottom: 0; width: 40%;
+    background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,.45) 58%, transparent 72%);
+  }
+  #book.curl-next #page-curl {
+    visibility: visible;
+    animation: curlNext .55s ease forwards;
+  }
+  #book.curl-prev #page-curl {
+    visibility: visible; left: 0; right: auto;
+    transform-origin: right center;
+    border-radius: 3px 0 0 3px;
+    animation: curlPrev .55s ease forwards;
+  }
+  @keyframes curlNext {
+    0%   { opacity: 1; transform: rotateY(0deg) skewY(0deg); }
+    40%  { opacity: 1; transform: rotateY(-55deg) skewY(-2deg); }
+    100% { opacity: 0; transform: rotateY(-105deg) skewY(-4deg); }
+  }
+  @keyframes curlPrev {
+    0%   { opacity: 1; transform: rotateY(0deg) skewY(0deg); }
+    40%  { opacity: 1; transform: rotateY(55deg) skewY(2deg); }
+    100% { opacity: 0; transform: rotateY(105deg) skewY(4deg); }
+  }
+
+  /* Physical page-turn (left leaf lifts/curves then settles — spread-open-ref motion) */
+  @keyframes flipNext {
+    0%   { transform: rotateY(0) scale(1); }
+    35%  { transform: perspective(1200px) rotateY(-28deg) scale(.97); opacity: .85; }
+    70%  { transform: perspective(1200px) rotateY(8deg) scale(.99); opacity: .95; }
+    100% { transform: rotateY(0) scale(1); opacity: 1; }
+  }
+  @keyframes flipPrev {
+    0%   { transform: rotateY(0) scale(1); }
+    35%  { transform: perspective(1200px) rotateY(28deg) scale(.97); opacity: .85; }
+    70%  { transform: perspective(1200px) rotateY(-8deg) scale(.99); opacity: .95; }
+    100% { transform: rotateY(0) scale(1); opacity: 1; }
+  }
+  #book.flip-next { animation: flipNext .55s ease; }
+  #book.flip-prev { animation: flipPrev .55s ease; }
+
+  /* During turn, exaggerate left-page lift */
+  #book.flip-next .page.left,
+  #book.flip-prev .page.left {
+    transition: transform .35s ease;
+  }
+  #book.flip-next .page.left {
+    transform: perspective(900px) rotateY(14deg) translateZ(8px);
+  }
+
+  @media (max-width: 700px) {
+    #cover-view { width: min(72vw, 70vh * 8.5 / 11); }
+    #book-wrap {
+      width: min(98vw, calc(86vh * 17 / 11));
+      height: min(86vh, calc(98vw * 11 / 17));
+    }
+    .panel .balloon, .panel .cap { font-size: 7px; }
+    .btn { padding: 5px 8px; font-size: 11px; }
+    .page-stack, .cover-lip { display: none; }
+    .page.left, .page.right { transform: none; }
+  }
+
+  /* =====================================================================
+     SHARE COPY — mobile layout + touch fixes (layout/behaviour only;
+     content, art, captions and TEST stamps unchanged)
+     ===================================================================== */
+  html, body { height: 100%; height: 100dvh; }
+  #zoom-layer { z-index: 45; }            /* above the side turn-zones: a tap on a zoomed panel always returns */
+  #pager { display: none; }
+  /* Ad panels (images at panel ratio; contain so nothing is cropped) */
+  .panel.ad { cursor: pointer; background: #111; }
+  .panel.ad .ad-link { display: block; width: 100%; height: 100%; }
+  .panel.ad img { object-fit: contain; }
+  .inside-cover.has-ad { justify-content: center; }
+  .inside-cover.has-ad .tiny { margin-top: 5%; }
+  .inside-cover .ad-link {
+    display: block; width: 100%; flex: 1 1 0; min-height: 0; max-height: 52%; margin-top: 6%;
+  }
+  .inside-cover .ad-link img { display: block; width: 100%; height: 100%; object-fit: contain; }
+  /* Newsstand front cover: one flattened image (assets/cover-front.jpg, 8.5x11). Old overlay plate / price box / TEST stamp hidden ON THE COVER ONLY. */
+  #cover-view .cover-plate, #cover-view .price-box, #cover-view .test-stamp { display: none; }
+  #cover-view .comic-object > img.cover-art { object-fit: cover; object-position: center center; }
+  /* open cue sits on the desk just under the cover so it never hides cover text */
+  #cover-view > .open-cue {
+    bottom: auto; top: calc(100% + 14px); color: #2a2218; text-shadow: none;
+    font-size: 12px; letter-spacing: .06em; z-index: 3;
+  }
+
+  /* Touch screens: no sticky hover states after a tap */
+  @media (hover: none) {
+    .btn:hover { border-color: #8a7355; color: var(--hint-light); }
+    .panel:hover { outline: none; }
+    .edge-hit:hover { color: rgba(245,197,24,0); }
+    .edge-hit.left:hover  { background: linear-gradient(90deg, rgba(0,0,0,.12), transparent); }
+    .edge-hit.right:hover { background: linear-gradient(270deg, rgba(0,0,0,.12), transparent); }
+  }
+  /* Touch screens: finger-sized buttons (>= 44px) */
+  @media (pointer: coarse) {
+    .btn { min-height: 44px; min-width: 44px; padding: 8px 12px; font-size: 13px; }
+    .btn.bookmark { min-width: 44px; font-size: 18px; padding: 8px 10px; }
+  }
+
+  /* ---------- PHONE PORTRAIT: one page at a time + swipe ---------- */
+  body.single #hud {
+    padding: 6px 8px; align-items: flex-start;
+  }
+  body.single.mode-open #hud { background: linear-gradient(180deg, rgba(0,0,0,.6), rgba(0,0,0,.2) 85%, transparent); }
+  body.single #hud .left { flex-direction: column; align-items: flex-start; gap: 3px; min-width: 0; flex: 1 1 auto; }
+  body.single #hud .right { flex: 0 0 auto; }
+  body.single #hud .badge { font-size: 10px; padding: 3px 7px; }
+  body.single #spread-label { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  body.single #btn-prev, body.single #btn-next { display: none; }
+  body.single.mode-open #pager {
+    display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+    justify-content: center; align-items: center; gap: 12px;
+    padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px));
+    background: linear-gradient(0deg, rgba(0,0,0,.55), transparent);
+  }
+  #pager .btn { min-height: 48px; min-width: 104px; font-size: 15px; }
+  #pager .count {
+    color: var(--hint-light); font: 700 13px system-ui, sans-serif;
+    min-width: 54px; text-align: center; text-shadow: 0 1px 3px #000;
+  }
+  body.single #reader { padding: 62px 0 72px; }
+  body.single #book-wrap {
+    width: min(96vw, calc((100vh - 140px) * 8.5 / 11));
+    width: min(96vw, calc((100dvh - 140px) * 8.5 / 11));
+    height: auto; max-height: none; aspect-ratio: 8.5 / 11;
+  }
+  body.single .page { width: 100%; border-radius: 3px; }
+  body.single #book.show-left .page.right,
+  body.single #book.show-right .page.left { display: none; }
+  body.single .spine { display: none; }
+  body.single #page-curl { width: 100%; }
+  body.single .panel .balloon { font-size: 11px; padding: 3px 6px; border-radius: 9px; }
+  body.single .panel .cap { font-size: 10px; padding: 2px 5px; }
+  body.single .page-num { font-size: 10px; }
+  body.single .edge-hit { top: 62px; bottom: 72px; width: 14vw; min-width: 44px; font-size: 32px; }
+  body.single.mode-open #hint { bottom: 68px; font-size: 11px; padding: 5px 10px; line-height: 1.3; }
+  body.single #zoom-frame { width: 98vw; height: calc(98vw * 9 / 16); }
+  body.single #zoom-caption { font-size: 14px; }
+
+  /* ---------- PHONE LANDSCAPE (short screens): spread fills height, controls move to the side gutters ---------- */
+  @media (orientation: landscape) and (max-height: 500px) {
+    #hud { padding: 6px; align-items: flex-start; }
+    body.mode-open #hud, body:not(.mode-open) #hud { background: none; }
+    #hud .left { flex-direction: column; align-items: flex-start; gap: 4px; max-width: 106px; }
+    #hud .badge { font-size: 10px; padding: 3px 6px; line-height: 1.25; }
+    #hud .right { display: grid; grid-template-columns: auto auto; gap: 6px; }
+    .btn { min-height: 44px; min-width: 44px; }
+    .btn .lbl { display: none; }
+    #book-wrap {
+      width: min(calc(100vw - 224px), calc((100vh - 12px) * 17 / 11));
+      width: min(calc(100vw - 224px), calc((100dvh - 12px) * 17 / 11));
+      height: auto; max-height: none; aspect-ratio: 17 / 11;
+    }
+    .page-stack, .cover-lip { display: none; }
+    .panel .balloon, .panel .cap { font-size: 9px; }
+    .end-page { gap: 6px; padding: 6%; }
+    .end-page img { max-height: 42%; }
+    .end-page h2 { font-size: 18px; }
+    #hint {
+      left: 6px; bottom: 6px; transform: none; max-width: 106px;
+      font-size: 10.5px; border-radius: 10px; text-align: left; padding: 6px 8px;
+    }
+    #zoom-frame {
+      width: min(calc(100vw - 230px), calc((100vh - 16px) * 16 / 9));
+      width: min(calc(100vw - 230px), calc((100dvh - 16px) * 16 / 9));
+      height: auto; aspect-ratio: 16 / 9;
+    }
+    .edge-hit { top: 112px; width: 16vw; }
+  }
+  /* small spreads (non-desktop) — keep the END page from clipping */
+  @media (max-width: 900px), (max-height: 500px) {
+    .end-page { justify-content: safe center; }
+  }
+
+  /* ---------- RE-LAYOUT v2: fewer, bigger panels; balloon band above the art; full uncropped art ---------- */
+  .comic-page.v2 {
+    inset: 3.2% 4% 4.2% 4.6%;
+    display: flex; flex-direction: column; gap: 1.6%; padding: 1.8%;
+  }
+  .page.left .comic-page.v2 { inset: 3.2% 4.6% 4.2% 4%; }
+  .comic-page.v2 .row { display: flex; gap: 2.2%; flex: 1 1 0; min-height: 0; }
+  .panel.v2 {
+    flex: 1 1 0; min-width: 0; min-height: 0;
+    display: flex; flex-direction: column;
+    background: #0d0d0d; border: 1.5px solid #000;
+  }
+  .panel.v2 .band {
+    flex: none; padding: 4px 5px 8px; background: #f6efdc;
+    border-bottom: 1.5px solid #000; text-align: left;
+  }
+  .panel.v2 .band.right { text-align: right; }
+  .panel.v2 .bal {
+    position: relative; display: inline-block; max-width: 100%;
+    background: #fffef5; color: #111; border: 1.5px solid #111; border-radius: 12px;
+    font-family: system-ui, sans-serif; font-weight: 800; line-height: 1.2;
+    font-size: clamp(9px, 1.55vh, 14px); padding: 3px 9px; box-shadow: 1px 1px 0 #111; text-align: left;
+  }
+  .panel.v2 .bal::after {           /* balloon tail pointing down into the art */
+    content: ""; position: absolute; bottom: -7px; left: 16px;
+    border: 6px solid transparent; border-top-color: #111; border-bottom: 0;
+  }
+  .panel.v2 .band.right .bal::after { left: auto; right: 16px; }
+  .panel.v2 .art { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; background: #0d0d0d; }
+  .panel.v2 .art img {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: contain; object-position: center; pointer-events: none;
+  }
+  .panel.v2 .cap2 {
+    flex: none; background: #000; color: #f5ecd8;
+    font-family: system-ui, sans-serif; font-weight: 600; line-height: 1.2;
+    font-size: clamp(8px, 1.3vh, 12px); padding: 2px 6px;
+  }
+  .panel.v2.ad { display: block; }
+  .panel.v2.ad .ad-link { display: block; width: 100%; height: 100%; }
+  .panel.v2.ad img { width: 100%; height: 100%; object-fit: contain; display: block; pointer-events: none; }
+  body.single .panel.v2 .bal { font-size: 12.5px; }
+  body.single .panel.v2 .cap2 { font-size: 10.5px; }
+  @media (orientation: landscape) and (max-height: 500px) {
+    .panel.v2 .bal { font-size: 9.5px; padding: 2px 6px; }
+    .panel.v2 .band { padding: 2px 3px 6px; }
+    .panel.v2 .cap2 { font-size: 8.5px; padding: 1px 4px; }
+  }
+
+  /* ---------- character splash pages + full-page ads ---------- */
+  .splash-page {
+    position: absolute; inset: 3.2% 4% 4.2% 4%;
+    display: flex; flex-direction: column; gap: 1.4%;
+    background: var(--gutter); padding: 1.8%; border: 1px solid #1a1a1a;
+  }
+  .splash-name {
+    flex: none; text-align: center; color: var(--accent);
+    font-family: Impact, "Arial Black", "Comic Sans MS", system-ui, sans-serif; font-weight: 900;
+    letter-spacing: .04em; line-height: 1.05; padding: 2% 2% 1.5%;
+    font-size: clamp(16px, 3.6vh, 34px);
+    text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+    background: linear-gradient(180deg, #1c1c1c, #000); border-bottom: 2px solid var(--accent);
+  }
+  .panel.v2.splash { flex: 1 1 auto; }
+  .panel.v2.splash .art img.bg {
+    object-fit: cover; filter: blur(14px) brightness(.45) saturate(1.1); transform: scale(1.15);
+  }
+  .panel.v2.splash .bal { font-size: clamp(11px, 2vh, 18px); padding: 5px 12px; }
+  .panel.v2.splash .cap2 { font-size: clamp(9px, 1.4vh, 13px); }
+  body.single .splash-name { font-size: 26px; }
+  body.single .panel.v2.splash .bal { font-size: 15px; }
+  body.single .panel.v2.splash .cap2 { font-size: 11px; }
+  @media (orientation: landscape) and (max-height: 500px) {
+    .splash-name { font-size: 15px; padding: 3px 4px; }
+    .panel.v2.splash .bal { font-size: 10.5px; padding: 2px 7px; }
+  }
+  .ad-page { position: absolute; inset: 2.5%; display: flex; align-items: center; justify-content: center; }
+  .ad-page .ad-link { display: block; width: 100%; height: 100%; }
+  .ad-page img { display: block; width: 100%; height: 100%; object-fit: contain; }
+  .comic-page.v2 .panel.v2 .art img.bg { object-fit: cover; filter: blur(10px) brightness(.4); transform: scale(1.15); }
+  .comic-page.v2.slides .panel.v2 { cursor: zoom-in; }
+  .splash-page.titled { inset: 2.5%; padding: 0; gap: 0; border: 0; background: #000; }
+  .splash-page.titled .panel.v2.splash { border: 0; }
+
+  /* Zoom: balloon sits ABOVE the frame and caption BELOW it, so neither covers the art/characters */
+  #zoom-frame { overflow: visible; width: min(92vw, 72vh * 16 / 9); height: min(72vh, 92vw * 9 / 16); }
+  #zoom-balloon { top: auto; bottom: calc(100% + 12px); left: 0; max-width: 100%; }
+  #zoom-balloon::after { content: ""; position: absolute; bottom: -9px; left: 22px; border: 8px solid transparent; border-top-color: #111; border-bottom: 0; }
+  #zoom-caption { bottom: auto; top: calc(100% + 3px); background: rgba(0,0,0,.85); }
+  body.single #zoom-frame { width: 98vw; height: calc(98vw * 9 / 16); }
+  @media (orientation: landscape) and (max-height: 500px) {
+    #zoom-frame {
+      width: min(calc(100vw - 230px), calc((100vh - 100px) * 16 / 9));
+      width: min(calc(100vw - 230px), calc((100dvh - 100px) * 16 / 9));
+      height: auto; aspect-ratio: 16 / 9; margin-top: 30px;
+    }
+    #zoom-balloon { font-size: 12px; padding: 4px 9px; bottom: calc(100% + 9px); }
+    #zoom-caption { font-size: 11px; padding: 4px 8px; }
+  }
+</style>
+</head>
+<body>
+  <div id="hud">
+    <div class="left">
+      <span style="display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center"><a class="badge newsstand-link" href="../" aria-label="Back to the BodyByDOT Comics newsstand" style="text-decoration:none;white-space:nowrap">&larr; Newsstand</a><span class="badge">TEST TEMPLATE</span></span>
+      <span class="badge" id="spread-label" style="display:none;border-color:#8a7355;color:var(--hint-light)">Cover</span>
+    </div>
+    <div class="right">
+      <button class="btn bookmark" id="btn-bookmark" type="button" title="Bookmark this spread" aria-label="Bookmark">🔖</button>
+      <button class="btn" id="btn-cover" type="button" disabled>Cover</button>
+      <button class="btn" id="btn-prev" type="button" disabled aria-label="Previous">◀<span class="lbl"> Prev</span></button>
+      <button class="btn" id="btn-next" type="button" disabled aria-label="Next"><span class="lbl">Next </span>▶</button>
+    </div>
+  </div>
+
+  <div id="stage">
+    <div id="desk-props" aria-hidden="true">
+      <div class="laptop-edge"></div>
+      <div class="stylus"></div>
+    </div>
+
+    <!-- COVER: drops onto white desk angled -->
+    <div id="cover-view" role="button" aria-label="Open comic" tabindex="0">
+      <div class="comic-object">
+        <img class="cover-art" src="assets/cover-front.jpg" alt="Body By DOT Fantasy Series — Issue #0 — Fredtana — front cover" />
+        <div class="price-box">ISSUE<br/>#0<br/>$0.00<br/>TEST</div>
+        <div class="cover-plate">
+          <div class="series">BodyByDOT Fantasy</div>
+          <div class="issue">Issue 0 — TEST</div>
+          <div class="sub">Where's My Phone?</div>
+        </div>
+        <div class="test-stamp">TEST</div>
+      </div>
+      <div class="open-cue">CLICK / TAP TO OPEN →</div>
+    </div>
+
+    <!-- READER: thick open book → flat two-page grid -->
+    <div id="reader">
+      <div id="book-wrap">
+        <div class="cover-lip" aria-hidden="true"></div>
+        <div class="page-stack left-stack" aria-hidden="true"></div>
+        <div class="page-stack right-stack" aria-hidden="true"></div>
+        <div id="book">
+          <div class="page left" id="page-left"></div>
+          <div class="spine"></div>
+          <div class="page right" id="page-right"></div>
+          <div id="page-curl" aria-hidden="true"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="zoom-layer" aria-hidden="true">
+    <div id="zoom-frame">
+      <img id="zoom-img" src="" alt="Zoomed panel" />
+      <div id="zoom-balloon"></div>
+      <div id="zoom-caption"></div>
+    </div>
+  </div>
+
+  <!-- Full-screen mouse zones: left = back, right = forward (like arrow keys) -->
+  <div class="edge-hit left" id="hit-prev" title="Previous spread (click left side)" role="button" aria-label="Previous spread"></div>
+  <div class="edge-hit right" id="hit-next" title="Next spread (click right side)" role="button" aria-label="Next spread"></div>
+
+  <div id="pager">
+    <button class="btn" id="pg-prev" type="button" aria-label="Previous page">‹ Prev</button>
+    <span class="count" id="pg-count"></span>
+    <button class="btn" id="pg-next" type="button" aria-label="Next page">Next ›</button>
+  </div>
+
+  <div id="hint">Comic lands on the white desk — click the cover to fold it open</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /*
+    Spreads: classic open book LEFT | RIGHT.
+    Zoom: any panel square freely.
+    Turn page: if zoomed → zoom out to WHOLE spread FIRST, then flip to next full spread.
+  */
+  /*
+    SHARE COPY STRUCTURE (owner): Fredtana story panel by panel through the run-and-yell (pages 1-4),
+    then the owner's 14 ending character slides in order, mixed full pages / 4-up / 2-up / 3-up (pages 5-12),
+    then the MORE CHARACTERS COMING SOON! last page. Balloons sit in a band ABOVE the art; wording from the
+    Fred promo master (runVO-v4). 16 pages = 8 spreads. Ads (3, one page each, separate spreads):
+    inside cover house ad (spread 1), BikerBeatdown (spread 5), Scooter's Place (spread 7).
+  */
+  const HOUSE_AD = 'mailto:readmywritings@gmail.com?subject=BodyByDOT%20Comic%20Ad%20Inquiry';
+  const SPREADS = [
+    {
+      label: 'Spread 1 — Inside cover | Page 1',
+      left: { type: 'inside-cover', ad: { src: 'assets/ad-house-1.jpg', href: HOUSE_AD, label: 'Advertisement: Your ad could be here! Advertise with BodyByDOT (email)' } },
+      right: { type: 'grid', layout: 'v2', pageNum: '1', rows: [
+        { f: 1, panels: [ { src: 'assets/p01-wheres-phone-clean.jpg', bg: true, cap: 'Dig site · Fredtana can\'t find his phone' } ] }
+      ] }
+    },
+    {
+      label: 'Spread 2 — Page 2 | Page 3',
+      left: { type: 'grid', layout: 'v2', pageNum: '2', rows: [
+        { f: 1.3, panels: [ { src: 'assets/p03-run-darnel-clean.jpg', balloon: "FIDGEET: No! Darnel, don't!", cap: 'Fred finds Fidgeet' } ] },
+        { f: 1, panels: [ { src: 'assets/p04-fidgeet-reply-clean.jpg', cap: 'The Darnel Program takes over' } ] }
+      ] },
+      right: { type: 'grid', layout: 'v2', pageNum: '3', rows: [
+        { f: 1, panels: [ { src: 'assets/p05-zap-fly-clean.jpg', cap: 'ZZZT! The Darnel Program zaps out of the phone and into Fred' } ] },
+        { f: 1.2, panels: [ { src: 'assets/fred-blue-eyes-clean.jpg', cap: 'Blue-eye ignition' } ] }
+      ] }
+    },
+    {
+      label: 'Spread 3 — Page 4 | Page 5',
+      left: { type: 'grid', layout: 'v2', pageNum: '4', rows: [
+        { f: 1, panels: [ { src: 'assets/p07-sprint-clean.jpg', bg: true, balloon: "LET'S GO! WOO! YEAH! ON MY WAY!", balloonRight: true, cap: 'Full-speed sprint' } ] }
+      ] },
+      right: { type: 'splash', titled: true, pageNum: '5', name: 'Fredtana', src: 'assets/finale-01-fredtana-dual.jpg' }
+    },
+    {
+      label: 'Spread 4 — Page 6 | Page 7',
+      left: { type: 'grid', layout: 'v2', slides: 'four', pageNum: '6', rows: [
+        { f: 1, panels: [ { src: 'assets/finale-02-fidgeet-darnel.jpg', alt: 'Fidgeet — Darnel Program running', slide: true }, { src: 'assets/finale-03-torquer-the-strong.jpg', alt: 'Torquer the Strong', slide: true } ] },
+        { f: 1, panels: [ { src: 'assets/finale-04-victor-biggs.jpg', alt: 'Victor Biggs', slide: true }, { src: 'assets/finale-05-evil-engineer-poorplan.jpg', alt: 'Evil Engineer Poorplan', slide: true } ] }
+      ] },
+      right: { type: 'splash', titled: true, pageNum: '7', name: 'Sergeant Black', src: 'assets/finale-06-sergeant-black.jpg' }
+    },
+    {
+      label: 'Spread 5 — Page 8 | Ad',
+      left: { type: 'grid', layout: 'v2', slides: 'two', pageNum: '8', rows: [
+        { f: 1, panels: [ { src: 'assets/finale-07-bread-and-butter.jpg', alt: 'Bread & Butter', slide: true } ] },
+        { f: 1, panels: [ { src: 'assets/finale-08-top-going-dark.jpg', alt: 'TOP — Going Dark', slide: true } ] }
+      ] },
+      right: { type: 'ad-page', ad: { src: 'assets/ad-bikerbeatdown-page.jpg', href: 'https://bikerbeatdown.com', label: 'Advertisement: BikerBeatdown.com — Gear for riders. Shop now' } }
+    },
+    {
+      label: 'Spread 6 — Page 9 | Page 10',
+      left: { type: 'splash', titled: true, pageNum: '9', name: 'Wreck scene — TOP pops the BS smoke', src: 'assets/finale-09-top-bs-smoke.jpg' },
+      right: { type: 'splash', titled: true, pageNum: '10', name: 'Sheriff Kowboi herding the new hires', src: 'assets/finale-10-sheriff-kowboi-herding.jpg' }
+    },
+    {
+      label: 'Spread 7 — Ad | Page 11',
+      left: { type: 'ad-page', ad: { src: 'assets/ad-scooters-page.jpg', href: 'https://www.facebook.com/profile.php?id=100063610058270', label: "Advertisement: Scooter's Place Bar & Grill — Use code SCOOTERS for 10% off at BodyByDOT.com" } },
+      right: { type: 'splash', titled: true, pageNum: '11', name: 'Sheriff Kowboi on the scooter', src: 'assets/finale-11-sheriff-kowboi-scooter.jpg' }
+    },
+    {
+      label: 'Spread 8 — Page 12 | Coming soon',
+      left: { type: 'grid', layout: 'v2', slides: 'three', pageNum: '12', rows: [
+        { f: 1, panels: [ { src: 'assets/finale-12-joe-pockets.jpg', alt: 'Joe Pockets', slide: true }, { src: 'assets/finale-13-princess-staycleen.jpg', alt: 'Princess Staycleen', slide: true } ] },
+        { f: 1, panels: [ { src: 'assets/finale-14-marsh-marsh.jpg', alt: 'Marsh-Marsh', slide: true } ] }
+      ] },
+      right: { type: 'end', final: true, src: 'assets/coming-soon.jpg', name: 'More characters coming soon!' }
+    }
+  ];
+
+  const coverView = document.getElementById('cover-view');
+  const reader = document.getElementById('reader');
+  const book = document.getElementById('book');
+  const pageLeft = document.getElementById('page-left');
+  const pageRight = document.getElementById('page-right');
+  const hint = document.getElementById('hint');
+  const spreadLabel = document.getElementById('spread-label');
+  const btnCover = document.getElementById('btn-cover');
+  const btnPrev = document.getElementById('btn-prev');
+  const btnNext = document.getElementById('btn-next');
+  const btnBookmark = document.getElementById('btn-bookmark');
+  const BM_KEY = 'bbdot-comic-share-bookmark-page-v6'; // stores a PAGE index (0..TOTAL_PAGES-1) so phone single-page mode can bookmark exact pages
+  const zoomLayer = document.getElementById('zoom-layer');
+  const zoomImg = document.getElementById('zoom-img');
+  const zoomCap = document.getElementById('zoom-caption');
+  const zoomBalloon = document.getElementById('zoom-balloon');
+
+  let mode = 'cover'; // cover | spread | zoom
+  let spreadIndex = 0;
+  let zoomed = false;
+  let turnPending = null; // 'next' | 'prev' after forced zoom-out
+  let turnLock = false;
+
+  /* Share copy: phone portrait = one page at a time. side 0 = left page, 1 = right page of the current spread. */
+  const singleMQ = window.matchMedia('(orientation: portrait) and (max-width: 700px)');
+  const touchMQ = window.matchMedia('(pointer: coarse)');
+  let single = singleMQ.matches;
+  let side = 1;
+  const TOTAL_PAGES = SPREADS.length * 2;
+  const pgPrev = document.getElementById('pg-prev');
+  const pgNext = document.getElementById('pg-next');
+  const pgCount = document.getElementById('pg-count');
+  document.body.classList.toggle('single', single);
+  function curPage() { return spreadIndex * 2 + (single ? side : 0); }
+  function isOnMark(bm) { return single ? bm === curPage() : Math.floor(bm / 2) === spreadIndex; }
+  function pageName(i, sd) {
+    var parts = String(SPREADS[i].label).split('—');
+    var halves = (parts[1] || parts[0]).split('|');
+    return (halves[sd] || halves[0]).trim();
+  }
+
+  function getBookmark() {
+    try {
+      var v = localStorage.getItem(BM_KEY);
+      if (v === null || v === '') return null;
+      var n = parseInt(v, 10);
+      if (isNaN(n) || n < 0 || n >= TOTAL_PAGES) return null;
+      return n;
+    } catch (e) { return null; }
+  }
+  function setBookmark(i) {
+    try { localStorage.setItem(BM_KEY, String(i)); } catch (e) {}
+  }
+  function clearBookmark() {
+    try { localStorage.removeItem(BM_KEY); } catch (e) {}
+  }
+  function updateBookmarkBtn() {
+    var bm = getBookmark();
+    btnBookmark.classList.toggle('saved', bm !== null);
+    btnBookmark.classList.toggle('on-mark', bm !== null && mode !== 'cover' && isOnMark(bm));
+    if (bm === null) {
+      btnBookmark.title = 'Bookmark this spread';
+      btnBookmark.setAttribute('aria-label', 'Bookmark this spread');
+    } else if (mode !== 'cover' && isOnMark(bm)) {
+      btnBookmark.title = 'Clear bookmark (you are here)';
+      btnBookmark.setAttribute('aria-label', 'Clear bookmark');
+    } else {
+      btnBookmark.title = single ? 'Jump to bookmarked page' : 'Jump to bookmarked spread ' + (Math.floor(bm / 2) + 1);
+      btnBookmark.setAttribute('aria-label', 'Jump to bookmark');
+    }
+  }
+  function jumpToBookmark() {
+    var bm = getBookmark();
+    if (bm === null) return;
+    if (zoomed) closeZoom(true);
+    if (mode === 'cover') {
+      openBook(bm);
+      return;
+    }
+    spreadIndex = Math.floor(bm / 2);
+    side = bm % 2;
+    renderSpread(spreadIndex);
+    updateBookmarkBtn();
+    setHint(single ? 'Jumped to bookmark · ' + pageName(spreadIndex, side) : 'Jumped to bookmark · spread ' + (spreadIndex + 1));
+    hideHintSoon(2500);
+  }
+  function onBookmarkClick() {
+    if (mode === 'cover') {
+      var bm = getBookmark();
+      if (bm !== null) {
+        jumpToBookmark();
+      } else {
+        setHint('Open the book first, then tap 🔖 to save your place');
+        hideHintSoon(2800);
+      }
+      return;
+    }
+    var bm = getBookmark();
+    if (bm === null) {
+      setBookmark(curPage());
+      updateBookmarkBtn();
+      setHint('Bookmarked ' + (single ? pageName(spreadIndex, side) : 'spread ' + (spreadIndex + 1)) + ' · tap 🔖 again here to clear, or elsewhere to jump back');
+      hideHintSoon(3500);
+      return;
+    }
+    if (isOnMark(bm)) {
+      clearBookmark();
+      updateBookmarkBtn();
+      setHint('Bookmark cleared');
+      hideHintSoon(2000);
+      return;
+    }
+    jumpToBookmark();
+  }
+
+  function setHint(t) {
+    if (touchMQ.matches) {
+      t = t.replace(/\bclick\b/g, 'tap').replace(/\bClick\b/g, 'Tap');
+    }
+    hint.textContent = t;
+    hint.classList.remove('hide');
+  }
+  function hideHintSoon(ms) {
+    clearTimeout(hideHintSoon._t);
+    hideHintSoon._t = setTimeout(function () { hint.classList.add('hide'); }, ms || 3500);
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+    });
+  }
+
+  /* Ads: plain links that open in a NEW TAB so the comic never closes. Never zoom, never turn pages. */
+  function adLinkHTML(ad, alt) {
+    return '<a class="ad-link" href="' + escapeHtml(ad.href) + '" target="_blank" rel="noopener" aria-label="' + escapeHtml(ad.label || 'Advertisement') + '">' +
+      '<img src="' + escapeHtml(ad.src) + '" alt="' + escapeHtml(ad.label || alt || 'Advertisement') + '" loading="eager" /></a>';
+  }
+  function pageHasAd(d) {
+    if (!d) return false;
+    if (d.ad) return true;
+    var list = d.panels || [];
+    (d.rows || []).forEach(function (r) { list = list.concat(r.panels); });
+    return list.some(function (q) { return q.ad; });
+  }
+  /* Hard rule: never ads on BOTH pages of one spread */
+  SPREADS.forEach(function (sp, i) {
+    if (pageHasAd(sp.left) && pageHasAd(sp.right)) console.error('Ad rule broken: spread ' + (i + 1) + ' has ads on both pages');
+  });
+
+  function renderPage(el, data, side) {
+    el.innerHTML = '';
+    el.className = 'page ' + side;
+    if (!data) {
+      el.innerHTML = '<div class="inside-cover"><div class="mark">— blank —</div></div>';
+      return;
+    }
+    if (data.type === 'inside-cover') {
+      el.innerHTML =
+        '<div class="inside-cover' + (data.ad ? ' has-ad' : '') + '">' +
+          '<div class="mark">BodyByDOT Fantasy<br/>Issue 0 · TEST<br/><br/>Inside front cover<br/>(blank pulp)</div>' +
+          '<div class="tiny">TEST TEMPLATE · not locked canon<br/>Click any panel square on the right to zoom</div>' +
+          (data.ad ? adLinkHTML(data.ad) : '') +
+        '</div>';
+      return;
+    }
+    if (data.type === 'end' && data.final) {
+      el.innerHTML = '<div class="ad-page end-splash"><img src="' + data.src + '" alt="' + escapeHtml(data.name || 'More characters coming soon') + '" /></div>';
+      return;
+    }
+    if (data.type === 'end') {
+      el.innerHTML =
+        '<div class="end-page">' +
+          '<h2>THE END — TEST</h2>' +
+          (data.src ? '<img src="' + data.src + '" alt="Coming soon" />' : '') +
+          '<div class="test-stamp">TEST</div>' +
+          '<p>Click Cover to restart · or Prev to re-read</p>' +
+          '<p style="font-size:10px;margin-top:6px">BodyByDOT Fantasy · Issue 0 TEST TEMPLATE</p>' +
+        '</div>' +
+        (data.pageNum ? '<div class="page-num">' + data.pageNum + '</div>' : '');
+      return;
+    }
+    if (data.type === 'ad-page') {
+      el.innerHTML = '<div class="ad-page">' + adLinkHTML(data.ad) + '</div>';
+      return;
+    }
+    if (data.type === 'splash') {
+      const sp = document.createElement('div');
+      sp.className = 'splash-page' + (data.titled ? ' titled' : '');
+      sp.innerHTML =
+        (data.titled ? '' : '<div class="splash-name">' + escapeHtml(data.name) + '</div>') +
+        '<div class="panel v2 splash" role="button" aria-label="Zoom ' + escapeHtml(data.name) + '">' +
+          (data.balloon ? '<div class="band' + (data.balloonRight ? ' right' : '') + '"><span class="bal">' + escapeHtml(data.balloon) + '</span></div>' : '') +
+          '<div class="art"><img class="bg" src="' + data.src + '" alt="" aria-hidden="true" /><img src="' + data.src + '" alt="' + escapeHtml(data.name) + '" loading="eager" /></div>' +
+          (data.cap ? '<div class="cap2">' + escapeHtml(data.cap) + '</div>' : '') +
+        '</div>';
+      const pnl = sp.querySelector('.panel');
+      pnl.dataset.src = data.src; pnl.dataset.cap = data.cap || ''; pnl.dataset.balloon = data.balloon || '';
+      pnl.addEventListener('click', function (e) { e.stopPropagation(); openZoom(data); });
+      el.appendChild(sp);
+      if (data.pageNum) {
+        const n = document.createElement('div');
+        n.className = 'page-num';
+        n.textContent = data.pageNum;
+        el.appendChild(n);
+      }
+      return;
+    }
+    if (data.type === 'grid' && data.layout === 'v2') {
+      const pageEl = document.createElement('div');
+      pageEl.className = 'comic-page v2' + (data.slides ? ' slides slides-' + data.slides : '');
+      data.rows.forEach(function (row) {
+        const rowEl = document.createElement('div');
+        rowEl.className = 'row';
+        rowEl.style.flexGrow = row.f || 1;
+        row.panels.forEach(function (p, i) {
+          const panel = document.createElement('div');
+          if (p.ad) {
+            panel.className = 'panel v2 ad';
+            panel.innerHTML = adLinkHTML(p, 'Advertisement');
+          } else {
+            panel.className = 'panel v2';
+            panel.dataset.src = p.src;
+            panel.dataset.cap = p.cap || '';
+            panel.dataset.balloon = p.balloon || '';
+            panel.innerHTML =
+              (p.balloon ? '<div class="band' + (p.balloonRight ? ' right' : '') + '"><span class="bal">' + escapeHtml(p.balloon) + '</span></div>' : '') +
+              '<div class="art">' + (p.slide || p.bg ? '<img class="bg" src="' + p.src + '" alt="" aria-hidden="true" />' : '') + '<img src="' + p.src + '" alt="' + escapeHtml(p.alt || ('Panel ' + (i + 1))) + '" loading="eager" /></div>' +
+              (p.cap ? '<div class="cap2">' + escapeHtml(p.cap) + '</div>' : '');
+            panel.addEventListener('click', function (e) { e.stopPropagation(); openZoom(p); });
+          }
+          rowEl.appendChild(panel);
+        });
+        pageEl.appendChild(rowEl);
+      });
+      el.appendChild(pageEl);
+      if (data.pageNum) {
+        const n = document.createElement('div');
+        n.className = 'page-num';
+        n.textContent = data.pageNum;
+        el.appendChild(n);
+      }
+      return;
+    }
+    if (data.type === 'grid') {
+      const grid = document.createElement('div');
+      grid.className = 'comic-page ' + (data.grid || 'grid-2x3');
+      (data.panels || []).forEach(function (p, i) {
+        const panel = document.createElement('div');
+        if (p.ad) {
+          panel.className = 'panel ad';
+          panel.innerHTML = adLinkHTML(p, 'Advertisement');
+          grid.appendChild(panel);
+          return;
+        }
+        panel.className = 'panel';
+        panel.dataset.src = p.src;
+        panel.dataset.cap = p.cap || '';
+        panel.dataset.balloon = p.balloon || '';
+        panel.innerHTML =
+          '<img src="' + p.src + '" alt="Panel ' + (i + 1) + '" loading="eager" />' +
+          (p.balloon
+            ? '<div class="balloon' + (p.balloonRight ? ' right' : '') + '">' + escapeHtml(p.balloon) + '</div>'
+            : '') +
+          (p.cap ? '<div class="cap">' + escapeHtml(p.cap) + '</div>' : '');
+        panel.addEventListener('click', function (e) {
+          e.stopPropagation();
+          openZoom(p);
+        });
+        grid.appendChild(panel);
+      });
+      el.appendChild(grid);
+      if (data.pageNum) {
+        const n = document.createElement('div');
+        n.className = 'page-num';
+        n.textContent = data.pageNum;
+        el.appendChild(n);
+      }
+    }
+  }
+
+  function renderSpread(i, anim) {
+    const s = SPREADS[i];
+    if (!s) return;
+    spreadIndex = i;
+    renderPage(pageLeft, s.left, 'left');
+    renderPage(pageRight, s.right, 'right');
+    spreadLabel.style.display = 'inline-block';
+    book.classList.toggle('show-left', single && side === 0);
+    book.classList.toggle('show-right', single && side === 1);
+    if (single) {
+      var pi = i * 2 + side;
+      spreadLabel.textContent = pageName(i, side) + ' · ' + (pi + 1) + '/' + TOTAL_PAGES;
+      btnPrev.disabled = pgPrev.disabled = pi <= 0;
+      btnNext.disabled = pgNext.disabled = pi >= TOTAL_PAGES - 1;
+      pgCount.textContent = (pi + 1) + ' / ' + TOTAL_PAGES;
+    } else {
+      spreadLabel.textContent = s.label;
+      btnPrev.disabled = pgPrev.disabled = i <= 0;
+      btnNext.disabled = pgNext.disabled = i >= SPREADS.length - 1;
+      pgCount.textContent = (i + 1) + ' / ' + SPREADS.length;
+    }
+    btnCover.disabled = false;
+    updateBookmarkBtn();
+    if (anim === 'next') {
+      book.classList.remove('flip-prev', 'curl-prev');
+      book.classList.add('flipping', 'flip-next', 'curl-next');
+    } else if (anim === 'prev') {
+      book.classList.remove('flip-next', 'curl-next');
+      book.classList.add('flipping', 'flip-prev', 'curl-prev');
+    }
+    setTimeout(function () {
+      book.classList.remove('flipping', 'flip-next', 'flip-prev', 'curl-next', 'curl-prev');
+      turnLock = false;
+    }, 560);
+    if (single) {
+      var pj = i * 2 + side;
+      setHint(pj === TOTAL_PAGES - 1
+        ? 'Last page · Cover to restart'
+        : 'Tap a panel to zoom · swipe or use Next › to turn');
+    } else {
+    setHint(i === 0
+      ? 'Full open book · click panels to zoom · LEFT/RIGHT screen sides turn pages'
+      : (i === SPREADS.length - 1
+        ? 'Last spread · Cover to restart'
+        : 'Zoom panels freely · turn page = zoom out then flip'));
+    }
+    hideHintSoon(4000);
+  }
+
+  function openBook(startIndex) {
+    if (mode !== 'cover') return;
+    var startPage = (typeof startIndex === 'number') ? startIndex : (single ? 1 : 0);
+    if (startPage < 0) startPage = 0;
+    if (startPage >= TOTAL_PAGES) startPage = TOTAL_PAGES - 1;
+    var start = Math.floor(startPage / 2);
+    side = startPage % 2;
+    var fromBookmark = (typeof startIndex === 'number');
+    coverView.classList.add('opening');
+    setTimeout(function () {
+      coverView.style.display = 'none';
+      document.body.classList.add('mode-open');
+      reader.classList.add('active');
+      mode = 'spread';
+      renderSpread(start);
+      if (fromBookmark) {
+        setHint('Opened to bookmark · ' + (single ? pageName(start, side) : 'spread ' + (start + 1)));
+      } else if (single) {
+        setHint('Tap a panel to zoom · swipe or Next › to turn');
+      } else {
+        setHint('Book folds open · left = blank inside cover · right = multi-panel page');
+      }
+      hideHintSoon(4500);
+      updateBookmarkBtn();
+    }, 620);
+  }
+
+  function goCover() {
+    closeZoom(true);
+    turnPending = null;
+    turnLock = false;
+    mode = 'cover';
+    document.body.classList.remove('mode-open');
+    reader.classList.remove('active');
+    coverView.style.display = '';
+    coverView.classList.remove('opening');
+    coverView.style.animation = 'none';
+    void coverView.offsetWidth;
+    coverView.style.animation = '';
+    spreadLabel.style.display = 'none';
+    btnCover.disabled = true;
+    btnPrev.disabled = true;
+    btnNext.disabled = true;
+    updateBookmarkBtn();
+    setHint('Comic lands on the white desk — click cover to fold open');
+    hideHintSoon(3000);
+  }
+
+  /**
+   * Page turn rule (Boss lock):
+   * If zoomed on a panel → first zoom OUT to whole spread, THEN flip.
+   * Never jump to next page while still in a single square.
+   */
+  function requestTurn(dir) {
+    if (mode === 'cover' || turnLock) return;
+    if (mode === 'zoom' || zoomed) {
+      turnPending = dir;
+      setHint('Zooming out to full pages… then turning');
+      closeZoom(false);
+      return;
+    }
+    if (mode !== 'spread') return;
+    doTurn(dir);
+  }
+
+  function doTurn(dir) {
+    if (turnLock) return;
+    if (single) {
+      var pi = spreadIndex * 2 + side;
+      if (dir === 'next') { if (pi >= TOTAL_PAGES - 1) return; pi++; }
+      else if (dir === 'prev') { if (pi <= 0) return; pi--; }
+      else return;
+      turnLock = true;
+      side = pi % 2;
+      renderSpread(Math.floor(pi / 2), dir);
+      return;
+    }
+    if (dir === 'next') {
+      if (spreadIndex >= SPREADS.length - 1) return;
+      turnLock = true;
+      renderSpread(spreadIndex + 1, 'next');
+    } else if (dir === 'prev') {
+      if (spreadIndex <= 0) return;
+      turnLock = true;
+      renderSpread(spreadIndex - 1, 'prev');
+    }
+  }
+
+  function openZoom(p) {
+    if (mode !== 'spread' && mode !== 'zoom') return;
+    if (turnLock) return;
+    zoomed = true;
+    mode = 'zoom';
+    zoomImg.src = p.src;
+    zoomCap.textContent = (p.cap || 'Panel') + (touchMQ.matches ? ' · tap → whole page' : ' · click / Esc → whole page');
+    if (p.balloon) {
+      zoomBalloon.style.display = 'block';
+      zoomBalloon.textContent = p.balloon;
+    } else {
+      zoomBalloon.style.display = 'none';
+    }
+    zoomLayer.classList.add('active');
+    zoomLayer.setAttribute('aria-hidden', 'false');
+    book.classList.add('zoomed');
+    setHint(single ? 'Zoomed · tap to return to the page' : 'Zoomed square · click to return to full spread (required before page turn)');
+    hideHintSoon(3500);
+  }
+
+  function closeZoom(silent) {
+    if (!zoomed && mode !== 'zoom') {
+      // still honor pending turn if somehow called
+      if (turnPending) {
+        var d = turnPending; turnPending = null;
+        setTimeout(function () { doTurn(d); }, 80);
+      }
+      return;
+    }
+    zoomed = false;
+    zoomLayer.classList.remove('active');
+    zoomLayer.setAttribute('aria-hidden', 'true');
+    book.classList.remove('zoomed');
+    if (reader.classList.contains('active')) {
+      mode = 'spread';
+      if (!silent && !turnPending) {
+        setHint(single ? 'Full page · swipe or Next › to turn' : 'Full spread · click LEFT / RIGHT side of screen (or arrows) to turn');
+        hideHintSoon(3000);
+      }
+    }
+    if (turnPending) {
+      var dir = turnPending;
+      turnPending = null;
+      setTimeout(function () { doTurn(dir); }, 220);
+    }
+  }
+
+  coverView.addEventListener('click', openBook);
+  coverView.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openBook(); }
+  });
+
+  btnCover.addEventListener('click', goCover);
+  btnNext.addEventListener('click', function () { requestTurn('next'); });
+  btnPrev.addEventListener('click', function () { requestTurn('prev'); });
+  btnBookmark.addEventListener('click', onBookmarkClick);
+  updateBookmarkBtn();
+  function panelUnder(x, y) {
+    var els = document.elementsFromPoint(x, y);
+    for (var k = 0; k < els.length; k++) {
+      if (els[k].classList && els[k].classList.contains('edge-hit')) continue;
+      var adl = els[k].closest ? els[k].closest('.ad-link') : null;
+      if (adl) return adl;
+      var pnl = els[k].closest ? els[k].closest('.panel') : null;
+      if (pnl) return pnl;
+    }
+    return null;
+  }
+  function edgeTap(dir) {
+    return function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var pnl = (mode === 'spread') ? panelUnder(e.clientX, e.clientY) : null;
+      if (pnl && pnl.classList.contains('ad-link')) { pnl.click(); return; }  // ad under the side zone -> open ad in new tab
+      if (pnl) {
+        openZoom({ src: pnl.dataset.src, cap: pnl.dataset.cap, balloon: pnl.dataset.balloon });
+        return;
+      }
+      requestTurn(dir);
+    };
+  }
+  document.getElementById('hit-next').addEventListener('click', edgeTap('next'));
+  document.getElementById('hit-prev').addEventListener('click', edgeTap('prev'));
+  pgNext.addEventListener('click', function () { requestTurn('next'); });
+  pgPrev.addEventListener('click', function () { requestTurn('prev'); });
+
+  /* Zoom layer: tap on the zoomed panel = back to page. Tap in a side zone OUTSIDE the panel = zoom out then turn. */
+  zoomLayer.addEventListener('click', function (e) {
+    var fr = document.getElementById('zoom-frame').getBoundingClientRect();
+    var inside = e.clientX >= fr.left && e.clientX <= fr.right && e.clientY >= fr.top && e.clientY <= fr.bottom;
+    var zw = document.getElementById('hit-next').getBoundingClientRect().width || 0;
+    if (!inside && zw && e.clientX > innerWidth - zw) { requestTurn('next'); return; }
+    if (!inside && zw && e.clientX < zw) { requestTurn('prev'); return; }
+    closeZoom();
+  });
+  /* swipe while zoomed = zoom out, then turn (same rule as buttons) */
+  var zx0 = null, zy0 = 0, zt0 = 0;
+  zoomLayer.addEventListener('touchstart', function (e) {
+    if (e.touches.length === 1) { zx0 = e.touches[0].clientX; zy0 = e.touches[0].clientY; zt0 = Date.now(); }
+    else zx0 = null;
+  }, { passive: true });
+  zoomLayer.addEventListener('touchend', function (e) {
+    var t = e.changedTouches[0];
+    if (zx0 == null || !t) return;
+    var dx = t.clientX - zx0, dy = t.clientY - zy0, dt = Date.now() - zt0;
+    zx0 = null;
+    if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy) * 1.2 || dt > 900) return;
+    requestTurn(dx < 0 ? 'next' : 'prev');
+  }, { passive: true });
+
+  /* rotate phone: switch between single page (portrait) and two-page spread (landscape) */
+  function onLayoutChange() {
+    var was = single;
+    single = singleMQ.matches;
+    document.body.classList.toggle('single', single);
+    if (was === single || mode === 'cover') return;
+    if (zoomed) closeZoom(true);
+    if (single) side = (spreadIndex === 0) ? 1 : 0;
+    renderSpread(spreadIndex);
+  }
+  if (singleMQ.addEventListener) singleMQ.addEventListener('change', onLayoutChange);
+  else if (singleMQ.addListener) singleMQ.addListener(onLayoutChange);
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      if (zoomed) closeZoom();
+      else if (mode === 'spread') goCover();
+      return;
+    }
+    if (mode === 'cover' && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault(); openBook(); return;
+    }
+    if (mode === 'zoom') {
+      if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); closeZoom(); return; }
+      // While zoomed: arrows / Space = zoom out THEN turn (Boss lock)
+      if (e.key === 'ArrowRight' || e.key === ' ') {
+        e.preventDefault();
+        requestTurn('next');
+      }
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        requestTurn('prev');
+      }
+      return;
+    }
+    if (mode === 'spread') {
+      if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); requestTurn('next'); }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); requestTurn('prev'); }
+    }
+  });
+
+  let pinchDist = 0;
+  document.addEventListener('touchstart', function (e) {
+    if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      pinchDist = Math.hypot(dx, dy);
+    }
+  }, { passive: true });
+  document.addEventListener('touchend', function () {
+    if (pinchDist) {
+      if (zoomed) closeZoom();
+      pinchDist = 0;
+    }
+  }, { passive: true });
+
+  window.addEventListener('wheel', function (e) {
+    if (zoomed && e.deltaY > 20) {
+      e.preventDefault();
+      closeZoom();
+    }
+  }, { passive: false });
+
+
+  /* Swipe across spread = page turn (clip model: rapid swipes flip multiple spreads) */
+  let swipeX0 = null, swipeY0 = null, swipeT0 = 0;
+  function onSwipeStart(x, y) {
+    swipeX0 = x; swipeY0 = y; swipeT0 = Date.now();
+  }
+  function onSwipeEnd(x, y) {
+    if (swipeX0 == null) return;
+    const dx = x - swipeX0;
+    const dy = y - swipeY0;
+    const dt = Date.now() - swipeT0;
+    swipeX0 = null;
+    if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+    if (dt > 900) return;
+    if (mode === 'cover') return;
+    if (dx < 0) requestTurn('next');
+    else requestTurn('prev');
+  }
+  book.addEventListener('touchstart', function (e) {
+    if (e.touches.length === 1) onSwipeStart(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: true });
+  book.addEventListener('touchend', function (e) {
+    const t = e.changedTouches[0];
+    if (t) onSwipeEnd(t.clientX, t.clientY);
+  }, { passive: true });
+  let mouseDown = false;
+  book.addEventListener('mousedown', function (e) {
+    if (e.button !== 0) return;
+    mouseDown = true;
+    onSwipeStart(e.clientX, e.clientY);
+  });
+  window.addEventListener('mouseup', function (e) {
+    if (!mouseDown) return;
+    mouseDown = false;
+    onSwipeEnd(e.clientX, e.clientY);
+  });
+
+  if (touchMQ.matches) setHint(hint.textContent);   // landing hint says "tap" on phones
+  hideHintSoon(5000);
+})();
+</script>
+</body>
+</html>
